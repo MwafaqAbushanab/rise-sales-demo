@@ -2744,13 +2744,23 @@ const DealCoachingDashboard = ({ selectedLead, intelligence: _intelligence }: {
 
 // Marketing Agent Dashboard - Generate content and improve AI search visibility
 const MarketingAgentDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'social' | 'blog' | 'battle' | 'seo' | 'ai'>('social');
+  const [activeTab, setActiveTab] = useState<'social' | 'blog' | 'battle' | 'seo' | 'ai' | 'aiCreate'>('social');
   const [generatedContent, setGeneratedContent] = useState<MarketingContent | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>('company');
   const [selectedPlatform, setSelectedPlatform] = useState<'linkedin' | 'twitter' | 'facebook'>('linkedin');
   const [selectedCompetitor, setSelectedCompetitor] = useState<string>('Jack Henry');
   const [copiedContent, setCopiedContent] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // AI Create tab state
+  const [aiContentType, setAiContentType] = useState<string>('social_post');
+  const [aiTopic, setAiTopic] = useState<string>('');
+  const [aiTargetAudience, setAiTargetAudience] = useState<string>('credit_union');
+  const [aiProduct, setAiProduct] = useState<string>('');
+  const [aiCustomPrompt, setAiCustomPrompt] = useState<string>('');
+  const [aiGeneratedContent, setAiGeneratedContent] = useState<string>('');
+  const [aiIsGenerating, setAiIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const generateContent = () => {
     setIsGenerating(true);
@@ -2778,7 +2788,69 @@ const MarketingAgentDashboard = () => {
     setTimeout(() => setCopiedContent(false), 2000);
   };
 
+  // Generate AI content via backend API with streaming
+  const generateAIContent = async () => {
+    setAiIsGenerating(true);
+    setAiError(null);
+    setAiGeneratedContent('');
+
+    try {
+      const response = await fetch('http://localhost:3001/api/marketing/generate/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contentType: aiContentType,
+          topic: aiTopic || undefined,
+          product: aiProduct || undefined,
+          targetAudience: aiTargetAudience,
+          customPrompt: aiContentType === 'custom' ? aiCustomPrompt : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate content');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No response body');
+      }
+
+      let fullContent = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                fullContent += parsed.content;
+                setAiGeneratedContent(fullContent);
+              }
+            } catch {
+              // Skip non-JSON lines
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Failed to generate content');
+    } finally {
+      setAiIsGenerating(false);
+    }
+  };
+
   const tabs = [
+    { id: 'aiCreate', label: 'AI Create', icon: Bot },
     { id: 'social', label: 'Social Posts', icon: Linkedin },
     { id: 'blog', label: 'Blog Content', icon: FileText },
     { id: 'battle', label: 'Battle Cards', icon: Swords },
@@ -2835,6 +2907,146 @@ const MarketingAgentDashboard = () => {
 
       {/* Content Area */}
       <div className="p-4">
+        {activeTab === 'aiCreate' && (
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
+              <div className="flex items-start gap-3">
+                <Bot className="w-5 h-5 text-purple-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-gray-800">AI-Powered Content Generation</h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Use Claude AI to generate marketing content tailored for Rise Analytics.
+                    Select a content type and customize your request.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Content Type</label>
+                <select
+                  value={aiContentType}
+                  onChange={(e) => setAiContentType(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                >
+                  <option value="social_post">Social Media Post</option>
+                  <option value="blog_outline">Blog Post Outline</option>
+                  <option value="email_campaign">Email Campaign (3-part sequence)</option>
+                  <option value="case_study">Case Study Outline</option>
+                  <option value="battle_card">Competitive Battle Card</option>
+                  <option value="seo_content">SEO-Optimized Content</option>
+                  <option value="custom">Custom Prompt</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Target Audience</label>
+                <select
+                  value={aiTargetAudience}
+                  onChange={(e) => setAiTargetAudience(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                >
+                  <option value="credit_union">Credit Union Executives</option>
+                  <option value="community_bank">Community Bank Leaders</option>
+                  <option value="both">Both CUs & Banks</option>
+                  <option value="cfo">CFOs / Finance</option>
+                  <option value="cio">CIOs / Technology</option>
+                  <option value="marketing">Marketing Leaders</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Topic {aiContentType === 'battle_card' ? '(Competitor Name)' : '(Optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={aiTopic}
+                  onChange={(e) => setAiTopic(e.target.value)}
+                  placeholder={aiContentType === 'battle_card' ? 'e.g., Jack Henry, Fiserv' : 'e.g., Analytics ROI, Member Retention'}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Product Focus (Optional)</label>
+                <select
+                  value={aiProduct}
+                  onChange={(e) => setAiProduct(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                >
+                  <option value="">All Products</option>
+                  <option value="Platform">Analytics Platform</option>
+                  <option value="Member 360">Member 360</option>
+                  <option value="Lending Analytics">Lending Analytics</option>
+                  <option value="Data Warehouse">Data Warehouse</option>
+                  <option value="Marketing Insights">Marketing Insights</option>
+                  <option value="Compliance Suite">Compliance Suite</option>
+                </select>
+              </div>
+            </div>
+
+            {aiContentType === 'custom' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Custom Prompt</label>
+                <textarea
+                  value={aiCustomPrompt}
+                  onChange={(e) => setAiCustomPrompt(e.target.value)}
+                  placeholder="Enter your custom marketing content request..."
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+            )}
+
+            <button
+              onClick={generateAIContent}
+              disabled={aiIsGenerating || (aiContentType === 'custom' && !aiCustomPrompt)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {aiIsGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate with AI
+                </>
+              )}
+            </button>
+
+            {aiError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                {aiError}
+              </div>
+            )}
+
+            {aiGeneratedContent && (
+              <div className="bg-gray-50 rounded-lg p-4 border">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-700">
+                    Generated {aiContentType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">{aiGeneratedContent.split(/\s+/).length} words</span>
+                    <button
+                      onClick={() => copyToClipboard(aiGeneratedContent)}
+                      className="px-3 py-1 bg-white border rounded-lg text-sm hover:bg-gray-100 flex items-center gap-1"
+                    >
+                      {copiedContent ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+                      {copiedContent ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans max-h-96 overflow-y-auto">{aiGeneratedContent}</pre>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'social' && (
           <div className="space-y-4">
             <div className="flex gap-4">
