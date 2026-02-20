@@ -10,6 +10,7 @@ import { formatCurrency, type Lead } from './types';
 
 import AppHeader from './components/layout/AppHeader';
 import TabNavigation from './components/layout/TabNavigation';
+import ErrorBoundary from './components/ErrorBoundary';
 import GettingStarted from './components/GettingStarted';
 import ExecutiveSummary from './components/ExecutiveSummary';
 import InstitutionsTable from './components/InstitutionsTable';
@@ -156,89 +157,107 @@ export default function App() {
         <Routes>
           <Route path="/" element={
             <>
-              {!loading && leads.length > 0 && (
-                <ExecutiveSummary leads={leads} hotLeads={hotLeads} />
-              )}
+              <ErrorBoundary fallbackTitle="Executive Summary failed to load">
+                {!loading && leads.length > 0 && (
+                  <ExecutiveSummary leads={leads} hotLeads={hotLeads} />
+                )}
 
-              {/* Stats cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                {stats.map((stat, i) => (
-                  <div key={i} className="bg-white rounded-xl p-4 shadow-sm border">
-                    <div className="flex items-center justify-between">
-                      <stat.icon className={`w-8 h-8 ${stat.color}`} />
-                      <span className="text-xs text-gray-500 font-medium">{stat.change}</span>
+                {/* Stats cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  {stats.map((stat, i) => (
+                    <div key={i} className="bg-white rounded-xl p-4 shadow-sm border">
+                      <div className="flex items-center justify-between">
+                        <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                        <span className="text-xs text-gray-500 font-medium">{stat.change}</span>
+                      </div>
+                      <div className="mt-2">
+                        <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                        <div className="text-sm text-gray-500">{stat.label}</div>
+                      </div>
                     </div>
-                    <div className="mt-2">
-                      <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                      <div className="text-sm text-gray-500">{stat.label}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ErrorBoundary>
 
               {/* Full-width institutions table */}
-              <InstitutionsTable
-                leads={filteredLeads}
-                selectedLead={selectedLead}
-                onSelectLead={setSelectedLead}
-                loading={loading}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                typeFilter={typeFilter}
-                onTypeFilterChange={setTypeFilter}
-                stateFilter={stateFilter}
-                onStateFilterChange={setStateFilter}
-                assetFilter={assetFilter}
-                onAssetFilterChange={setAssetFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
-                availableStates={availableStates}
-              />
+              <ErrorBoundary fallbackTitle="Institutions table failed to load">
+                <InstitutionsTable
+                  leads={filteredLeads}
+                  selectedLead={selectedLead}
+                  onSelectLead={setSelectedLead}
+                  loading={loading}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  typeFilter={typeFilter}
+                  onTypeFilterChange={setTypeFilter}
+                  stateFilter={stateFilter}
+                  onStateFilterChange={setStateFilter}
+                  assetFilter={assetFilter}
+                  onAssetFilterChange={setAssetFilter}
+                  statusFilter={statusFilter}
+                  onStatusFilterChange={setStatusFilter}
+                  availableStates={availableStates}
+                />
+              </ErrorBoundary>
 
               {/* Intelligence + AI Chat side by side */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                 <div className="min-h-[400px] max-h-[700px] overflow-y-auto">
-                  <IntelligencePanel
-                    intelligence={selectedLeadIntelligence}
-                    lead={selectedLead}
-                    competitiveIntel={selectedLeadCompetitiveIntel}
-                    onOpenROICalculator={() => setShowROICalculator(true)}
-                  />
+                  <ErrorBoundary fallbackTitle="Intelligence panel failed to load">
+                    <IntelligencePanel
+                      intelligence={selectedLeadIntelligence}
+                      lead={selectedLead}
+                      competitiveIntel={selectedLeadCompetitiveIntel}
+                      onOpenROICalculator={() => setShowROICalculator(true)}
+                    />
+                  </ErrorBoundary>
                 </div>
                 <div className="min-h-[400px] max-h-[700px]">
-                  <AIChat
-                    selectedLead={selectedLead}
-                    intelligence={selectedLeadIntelligence}
-                    competitiveIntel={selectedLeadCompetitiveIntel}
-                  />
+                  <ErrorBoundary fallbackTitle="AI Chat failed to load">
+                    <AIChat
+                      selectedLead={selectedLead}
+                      intelligence={selectedLeadIntelligence}
+                      competitiveIntel={selectedLeadCompetitiveIntel}
+                    />
+                  </ErrorBoundary>
                 </div>
               </div>
             </>
           } />
 
           <Route path="/acceleration" element={
-            !loading && leads.length > 0 ? (
-              <SalesAccelerationDashboard leads={leads} onSelectLead={(lead) => {
-                setSelectedLead(lead);
-                navigate('/');
-              }} />
-            ) : null
+            <ErrorBoundary fallbackTitle="Sales Acceleration failed to load">
+              {!loading && leads.length > 0 ? (
+                <SalesAccelerationDashboard leads={leads} onSelectLead={(lead) => {
+                  setSelectedLead(lead);
+                  navigate('/');
+                }} />
+              ) : null}
+            </ErrorBoundary>
           } />
 
           <Route path="/territory" element={
-            !loading && leads.length > 0 ? (
-              <TerritoryIntelligenceDashboard leads={leads} />
-            ) : null
+            <ErrorBoundary fallbackTitle="Territory Intelligence failed to load">
+              {!loading && leads.length > 0 ? (
+                <TerritoryIntelligenceDashboard leads={leads} />
+              ) : null}
+            </ErrorBoundary>
           } />
 
           <Route path="/coaching" element={
-            <DealCoachingDashboard
-              selectedLead={selectedLead}
-              intelligence={selectedLeadIntelligence}
-            />
+            <ErrorBoundary fallbackTitle="Deal Coach failed to load">
+              <DealCoachingDashboard
+                selectedLead={selectedLead}
+                intelligence={selectedLeadIntelligence}
+              />
+            </ErrorBoundary>
           } />
 
-          <Route path="/marketing" element={<MarketingAgentDashboard />} />
+          <Route path="/marketing" element={
+            <ErrorBoundary fallbackTitle="Marketing Agent failed to load">
+              <MarketingAgentDashboard />
+            </ErrorBoundary>
+          } />
         </Routes>
       </main>
 
