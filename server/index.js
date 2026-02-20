@@ -2,11 +2,88 @@ import express from 'express';
 import cors from 'cors';
 import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// JSON file store for lead pipeline data
+const DATA_DIR = join(__dirname, 'data');
+const SALES_DATA_FILE = join(DATA_DIR, 'sales-data.json');
+
+if (!existsSync(DATA_DIR)) {
+  mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function readSalesData() {
+  if (!existsSync(SALES_DATA_FILE)) return {};
+  try {
+    return JSON.parse(readFileSync(SALES_DATA_FILE, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function writeSalesData(data) {
+  writeFileSync(SALES_DATA_FILE, JSON.stringify(data, null, 2));
+}
+
+// =====================================================
+// NCUA DATA CACHE
+// =====================================================
+const NCUA_CACHE_FILE = join(DATA_DIR, 'ncua-cache.json');
+const NCUA_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+const NCUA_ENDPOINTS = [
+  'https://data.ncua.gov/resource/9k6a-5st2.json',
+  'https://data.ncua.gov/resource/kp6f-mwpt.json',
+  'https://data.ncua.gov/resource/7kii-a53n.json',
+];
+
+function readNcuaCache() {
+  if (!existsSync(NCUA_CACHE_FILE)) return null;
+  try {
+    const cache = JSON.parse(readFileSync(NCUA_CACHE_FILE, 'utf-8'));
+    if (Date.now() - cache.timestamp < NCUA_CACHE_TTL_MS) {
+      return cache.data;
+    }
+  } catch { /* cache corrupted */ }
+  return null;
+}
+
+function writeNcuaCache(data) {
+  writeFileSync(NCUA_CACHE_FILE, JSON.stringify({ timestamp: Date.now(), data }, null, 2));
+}
+
+async function fetchNcuaFromSource() {
+  for (const endpoint of NCUA_ENDPOINTS) {
+    try {
+      const params = new URLSearchParams({
+        '$limit': '10000',
+        '$order': 'total_assets DESC',
+      });
+      const response = await fetch(`${endpoint}?${params.toString()}`, {
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!response.ok) continue;
+      const data = await response.json();
+      if (data && data.length > 0) {
+        console.log(`NCUA: fetched ${data.length} records from ${endpoint}`);
+        return data;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 app.use(cors());
 app.use(express.json());
@@ -315,8 +392,8 @@ You create compelling, SEO-optimized marketing content that helps Rise Analytics
 - Founded: 2018, Austin Texas
 - Customers: 150+ credit unions and community banks
 - Products: Analytics Platform, Data Warehouse, Member 360, Lending Analytics, Marketing Insights, Compliance Suite
-- Average ROI: 211%
-- Average payback: 4.2 months
+- Average ROI: 150-200% (estimated based on customer averages)
+- Average payback: 4-6 months (estimated)
 - Go-live time: 4-6 weeks (vs 6-12 months for competitors)
 
 ## Target Keywords
@@ -508,8 +585,8 @@ app.get('/api/marketing/company-profile', (req, res) => {
       headquarters: 'Austin, Texas',
       website: 'https://riseanalytics.com',
       customers: '150+ credit unions and community banks',
-      averageROI: '211%',
-      averagePayback: '4.2 months',
+      averageROI: '150-200% (estimated)',
+      averagePayback: '4-6 months (estimated)',
     },
     products: [
       { name: 'Rise Analytics Platform', category: 'Business Intelligence', price: '$2,500-$75,000/mo' },
@@ -577,7 +654,7 @@ Your role is to provide real-time coaching advice to sales representatives based
 - Products: Analytics Platform, Data Warehouse, Member 360, Lending Analytics, Marketing Insights, Compliance Suite
 - Pricing: $2,500-$75,000/month depending on size
 - Implementation: 4-6 weeks (vs 6-12 months for competitors)
-- Average ROI: 211%, payback in 4.2 months
+- Average ROI: 150-200% (estimated), payback in 4-6 months
 
 ## Coaching Style
 - Be direct and actionable
@@ -821,6 +898,86 @@ Provide a comprehensive deal analysis:
   }
 });
 
+// =====================================================
+// LEAD PERSISTENCE ENDPOINTS
+// =====================================================
+
+// Get all saved lead overrides
+app.get('/api/leads', (req, res) => {
+  const data = readSalesData();
+  res.json(data);
+});
+
+// Save/update a single lead's sales data
+app.put('/api/leads/:id', (req, res) => {
+  const data = readSalesData();
+  data[req.params.id] = { ...data[req.params.id], ...req.body, updatedAt: new Date().toISOString() };
+  writeSalesData(data);
+  res.json(data[req.params.id]);
+});
+
+// Bulk save lead overrides (for migration from localStorage)
+app.post('/api/leads/bulk', (req, res) => {
+  const existing = readSalesData();
+  const updates = req.body;
+  if (typeof updates !== 'object' || updates === null) {
+    return res.status(400).json({ error: 'Body must be an object keyed by lead ID' });
+  }
+  for (const [id, fields] of Object.entries(updates)) {
+    existing[id] = { ...existing[id], ...fields, updatedAt: new Date().toISOString() };
+  }
+  writeSalesData(existing);
+  res.json({ saved: Object.keys(updates).length });
+});
+
+// Delete a lead's saved data
+app.delete('/api/leads/:id', (req, res) => {
+  const data = readSalesData();
+  delete data[req.params.id];
+  writeSalesData(data);
+  res.json({ deleted: req.params.id });
+});
+
+// =====================================================
+// NCUA CACHING PROXY
+// =====================================================
+
+// Get cached NCUA data (returns cached if fresh, fetches if stale)
+app.get('/api/ncua/credit-unions', async (req, res) => {
+  // Try cache first
+  const cached = readNcuaCache();
+  if (cached) {
+    return res.json({ data: cached, source: 'cache' });
+  }
+
+  // Fetch fresh data
+  const freshData = await fetchNcuaFromSource();
+  if (freshData) {
+    writeNcuaCache(freshData);
+    return res.json({ data: freshData, source: 'live' });
+  }
+
+  // All sources failed — return stale cache if any exists
+  if (existsSync(NCUA_CACHE_FILE)) {
+    try {
+      const stale = JSON.parse(readFileSync(NCUA_CACHE_FILE, 'utf-8'));
+      return res.json({ data: stale.data, source: 'stale-cache' });
+    } catch { /* fall through */ }
+  }
+
+  res.status(503).json({ error: 'NCUA data unavailable' });
+});
+
+// Force refresh the NCUA cache
+app.post('/api/ncua/refresh', async (req, res) => {
+  const freshData = await fetchNcuaFromSource();
+  if (freshData) {
+    writeNcuaCache(freshData);
+    return res.json({ refreshed: true, count: freshData.length });
+  }
+  res.status(503).json({ error: 'Failed to refresh NCUA data from all endpoints' });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -830,4 +987,19 @@ app.listen(PORT, () => {
   console.log(`🚀 Rise AI Sales Agent server running on port ${PORT}`);
   console.log(`📡 Health check: http://localhost:${PORT}/health`);
   console.log(`📣 Marketing API: http://localhost:${PORT}/api/marketing/generate`);
+  // Pre-warm the NCUA cache on startup
+  const cached = readNcuaCache();
+  if (!cached) {
+    console.log('📥 Pre-warming NCUA cache...');
+    fetchNcuaFromSource().then(data => {
+      if (data) {
+        writeNcuaCache(data);
+        console.log(`✅ NCUA cache warmed: ${data.length} credit unions`);
+      } else {
+        console.log('⚠️ NCUA cache warm failed — will use sample data');
+      }
+    });
+  } else {
+    console.log(`✅ NCUA cache fresh (${cached.length} credit unions)`);
+  }
 });

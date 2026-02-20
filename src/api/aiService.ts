@@ -1,7 +1,7 @@
 // AI Service - Connects to the Claude-powered backend
 // This replaces the pattern-matching approach with real AI
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -184,7 +184,7 @@ export function getFallbackResponse(message: string, leadName?: string): string 
   const msg = message.toLowerCase();
 
   if (msg.includes('email') || msg.includes('outreach')) {
-    return `I'd love to help you write an email for ${leadName || 'this prospect'}! However, the AI backend is currently unavailable. Please check that the server is running on port 3001.\n\n**To start the server:**\n\`\`\`bash\ncd server && npm install && npm run dev\n\`\`\`\n\nMake sure you have your ANTHROPIC_API_KEY set in server/.env`;
+    return `I'd love to help you write an email for ${leadName || 'this prospect'}! However, the AI backend is currently unavailable. Please check that the server is running on port 3002.\n\n**To start the server:**\n\`\`\`bash\ncd server && npm install && npm run dev\n\`\`\`\n\nMake sure you have your ANTHROPIC_API_KEY set in server/.env`;
   }
 
   if (msg.includes('help') || msg.includes('what can')) {

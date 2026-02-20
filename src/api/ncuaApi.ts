@@ -25,27 +25,38 @@ export interface NCUASearchParams {
   limit?: number;
 }
 
-// Fetch credit unions using multiple data sources
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+
+// Fetch credit unions — tries server cache first, then direct NCUA, then sample data
 export async function fetchCreditUnions(params: NCUASearchParams = {}): Promise<CreditUnion[]> {
-  // Try multiple NCUA data endpoints
+  // 1. Try server-side cache proxy (fastest, most reliable)
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/ncua/credit-unions`);
+    if (res.ok) {
+      const { data, source } = await res.json();
+      if (data && data.length > 0) {
+        console.log(`NCUA: ${data.length} credit unions from server (${source})`);
+        return applyClientFilters(transformNCUAData(data), params);
+      }
+    }
+  } catch {
+    // Server not available — fall through to direct fetch
+  }
+
+  // 2. Fall back to direct NCUA API calls
   const endpoints = [
-    // NCUA Call Report data (Socrata)
     'https://data.ncua.gov/resource/9k6a-5st2.json',
-    // NCUA Credit Union directory
     'https://data.ncua.gov/resource/kp6f-mwpt.json',
-    // Alternative endpoint
     'https://data.ncua.gov/resource/7kii-a53n.json',
   ];
 
   for (const endpoint of endpoints) {
     try {
-      // Build query with SoQL (Socrata Query Language)
       const queryParams = new URLSearchParams({
         '$limit': '10000',
         '$order': 'total_assets DESC',
       });
 
-      // Add filters
       const whereConditions: string[] = [];
       if (params.state) {
         whereConditions.push(`state='${params.state}'`);
@@ -62,9 +73,7 @@ export async function fetchCreditUnions(params: NCUASearchParams = {}): Promise<
       }
 
       const response = await fetch(`${endpoint}?${queryParams.toString()}`, {
-        headers: {
-          'Accept': 'application/json',
-        }
+        headers: { 'Accept': 'application/json' },
       });
 
       if (!response.ok) {
@@ -73,7 +82,6 @@ export async function fetchCreditUnions(params: NCUASearchParams = {}): Promise<
       }
 
       const data = await response.json();
-
       if (data && data.length > 0) {
         console.log(`Successfully fetched ${data.length} credit unions from ${endpoint}`);
         return transformNCUAData(data);
@@ -84,9 +92,19 @@ export async function fetchCreditUnions(params: NCUASearchParams = {}): Promise<
     }
   }
 
-  // If all endpoints fail, return embedded sample data for demo purposes
-  console.log('All NCUA endpoints failed, using sample credit union data');
+  // 3. All sources failed — use embedded sample data
+  console.log('All NCUA sources failed, using sample credit union data');
   return getSampleCreditUnions();
+}
+
+function applyClientFilters(cus: CreditUnion[], params: NCUASearchParams): CreditUnion[] {
+  return cus.filter(cu => {
+    if (params.state && cu.state !== params.state) return false;
+    if (params.minAssets && cu.assets < params.minAssets) return false;
+    if (params.maxAssets && cu.assets > params.maxAssets) return false;
+    if (params.name && !cu.name.toLowerCase().includes(params.name.toLowerCase())) return false;
+    return true;
+  });
 }
 
 function transformNCUAData(data: any[]): CreditUnion[] {
