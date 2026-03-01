@@ -1,5 +1,7 @@
 import type { Bank } from '../api/fdicApi';
 import type { CreditUnion } from '../api/ncuaApi';
+import type { CallReportData, FinancialHealthScore } from './callReport';
+import type { DecisionMaker } from './contacts';
 
 export interface Lead {
   id: string;
@@ -24,11 +26,39 @@ export interface Lead {
   lastContact: string;
   recommendedProducts: string[];
   notes: string;
+  callReport?: CallReportData;            // NCUA 5300 deep financial data
+  financialHealth?: FinancialHealthScore;  // Computed health score
+  decisionMakers?: DecisionMaker[];       // Apollo.io enriched contacts
 }
 
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
+}
+
+export interface Activity {
+  id: string;
+  leadId: string;
+  type: 'call' | 'email' | 'meeting' | 'note' | 'status_change';
+  description: string;
+  timestamp: string;
+  metadata?: Record<string, string>;
+}
+
+export const PIPELINE_STAGES = ['new', 'contacted', 'qualified', 'demo_scheduled', 'proposal_sent', 'won', 'lost'] as const;
+
+export function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = now - then;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
 }
 
 export function calculateLeadScore(assets: number, members: number, roa: number): number {
@@ -120,6 +150,7 @@ export function creditUnionToLead(cu: CreditUnion): Lead {
     lastContact: 'Never',
     recommendedProducts: getRecommendedProducts(cu.assets, 'cu'),
     notes: '',
+    callReport: cu.callReport,
   };
 }
 

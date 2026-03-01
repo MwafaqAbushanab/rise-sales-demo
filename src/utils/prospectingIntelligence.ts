@@ -1,6 +1,8 @@
 // Prospecting Intelligence Module
 // Analyzes institutions to identify best sales opportunities
 
+import type { CallReportData } from '../types/callReport';
+
 export interface ProspectIntelligence {
   // Overall opportunity score (0-100)
   opportunityScore: number;
@@ -70,6 +72,7 @@ interface Lead {
   deposits: number;
   roa: number;
   branches: number;
+  callReport?: CallReportData;
 }
 
 // Analyze a lead and generate intelligence
@@ -244,12 +247,12 @@ function analyzeGrowthSignals(lead: Lead, _peers: Lead[]): ProspectIntelligence[
     score += 10;
   } else if (lead.roa > 0 && lead.roa < 0.5) {
     indicators.push({
-      type: 'positive',
-      label: 'Improvement Opportunity',
-      description: 'Lower ROA suggests they need better insights to optimize',
+      type: 'negative',
+      label: 'Low ROA - Approach with Sensitivity',
+      description: `ROA of ${lead.roa.toFixed(2)}% is below the industry average of 0.6-0.8%. Analytics could help identify efficiency gains, but approach with sensitivity to their financial position.`,
       impact: 'high'
     });
-    score += 15;
+    score += 10;
   }
 
   // Member/branch density for CUs
@@ -276,6 +279,38 @@ function analyzeGrowthSignals(lead: Lead, _peers: Lead[]): ProspectIntelligence[
       impact: 'medium'
     });
     score += 10;
+  }
+
+  // Real 5300 Call Report trends (when available)
+  if (lead.callReport?.trends) {
+    const t = lead.callReport.trends;
+    if (t.memberGrowthRate > 3) {
+      indicators.push({
+        type: 'positive',
+        label: `Member Growth: +${t.memberGrowthRate.toFixed(1)}% QoQ`,
+        description: `NCUA 5300 data shows ${t.memberGrowthRate.toFixed(1)}% member growth — real regulatory data`,
+        impact: t.memberGrowthRate > 5 ? 'high' : 'medium'
+      });
+      score += t.memberGrowthRate > 5 ? 15 : 10;
+    }
+    if (t.delinquencyChange > 50) {
+      indicators.push({
+        type: 'negative',
+        label: `Rising Delinquency: +${t.delinquencyChange}bp QoQ`,
+        description: 'Delinquency is rising — they need lending analytics to get ahead of this trend',
+        impact: 'high'
+      });
+      score += 10; // Opportunity to sell Rise Lending Analytics
+    }
+    if (t.assetGrowthRate > 4) {
+      indicators.push({
+        type: 'positive',
+        label: `Asset Growth: +${t.assetGrowthRate.toFixed(1)}% QoQ`,
+        description: `Strong asset growth from NCUA 5300 data — scaling creates analytics needs`,
+        impact: 'high'
+      });
+      score += 10;
+    }
   }
 
   return { score: Math.min(score, 100), indicators };
@@ -423,6 +458,19 @@ function analyzeBuyingSignals(
       description: 'Growth-oriented institutions invest in tools'
     });
     score += 15;
+  }
+
+  // Financial health concerns from 5300 data create urgency
+  if (lead.callReport?.latestQuarter) {
+    const q = lead.callReport.latestQuarter;
+    if (q.delinquencyRatio > 0.015 || q.netWorthRatio < 8 || q.efficiencyRatio > 82) {
+      indicators.push({
+        type: 'strong',
+        label: 'Financial Pressure',
+        description: `Real NCUA data shows ${q.delinquencyRatio > 0.015 ? 'elevated delinquency' : q.netWorthRatio < 8 ? 'declining capital' : 'efficiency challenges'} — creates urgency for analytics`
+      });
+      score += 20;
+    }
   }
 
   return { score: Math.min(score, 100), indicators };

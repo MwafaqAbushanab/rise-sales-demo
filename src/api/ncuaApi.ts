@@ -1,6 +1,8 @@
 // NCUA API Service - Fetches real Credit Union data
 // Using Socrata Open Data API from NCUA
 
+import type { CallReportData } from '../types/callReport';
+
 export interface CreditUnion {
   id: string;
   name: string;
@@ -15,6 +17,7 @@ export interface CreditUnion {
   roa: number;
   charterType: string;
   peerGroup: string;
+  callReport?: CallReportData;  // Deep financial data from NCUA 5300
 }
 
 export interface NCUASearchParams {

@@ -1,10 +1,12 @@
-import { Building2, Rocket, Globe, GraduationCap, Megaphone } from 'lucide-react';
+import { Search, FileText, Bell, Rocket, Globe, GraduationCap, Megaphone } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
-export type TabId = 'pipeline' | 'acceleration' | 'territory' | 'coaching' | 'marketing';
+export type TabId = 'prospect-finder' | 'precall' | 'alerts' | 'acceleration' | 'territory' | 'coaching' | 'marketing';
 
 export const TAB_PATHS: Record<TabId, string> = {
-  pipeline: '/',
+  'prospect-finder': '/',
+  precall: '/precall',
+  alerts: '/alerts',
   acceleration: '/acceleration',
   territory: '/territory',
   coaching: '/coaching',
@@ -12,7 +14,9 @@ export const TAB_PATHS: Record<TabId, string> = {
 };
 
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }>; path: string }[] = [
-  { id: 'pipeline', label: 'Pipeline', icon: Building2, path: TAB_PATHS.pipeline },
+  { id: 'prospect-finder', label: 'Prospect Finder', icon: Search, path: TAB_PATHS['prospect-finder'] },
+  { id: 'precall', label: 'Pre-Call Prep', icon: FileText, path: TAB_PATHS.precall },
+  { id: 'alerts', label: 'Alerts', icon: Bell, path: TAB_PATHS.alerts },
   { id: 'acceleration', label: 'Sales Acceleration', icon: Rocket, path: TAB_PATHS.acceleration },
   { id: 'territory', label: 'Territory', icon: Globe, path: TAB_PATHS.territory },
   { id: 'coaching', label: 'Deal Coach', icon: GraduationCap, path: TAB_PATHS.coaching },
@@ -27,7 +31,7 @@ export default function TabNavigation() {
           <NavLink
             key={tab.id}
             to={tab.path}
-            end={tab.id === 'pipeline'}
+            end={tab.id === 'prospect-finder'}
             role="tab"
             className={({ isActive }) =>
               `flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${

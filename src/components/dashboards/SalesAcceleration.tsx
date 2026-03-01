@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
-import { Flame, Users, Landmark, MapPin, ChevronUp, ChevronDown, Star, Eye, Check, Mail, Rocket } from 'lucide-react';
+import { Flame, Users, Landmark, MapPin, ChevronUp, ChevronDown, Star, Eye, Check, Mail, Rocket, Activity } from 'lucide-react';
 import { type Lead, formatCurrency } from '../../types';
 import { identifyHotLeads, calculateDashboardMetrics, getTopCreditUnions, getTopCommunityBanks, generateColdEmailTemplate, type HotLead } from '../../utils/salesAcceleration';
 import { formatCurrencyShort } from '../../utils/roiCalculator';
+import { computeFinancialHealth } from '../../utils/financialHealth';
 
 // Sales Acceleration Dashboard - Shows hot leads with product recommendations
 export default function SalesAccelerationDashboard({ leads, onSelectLead }: {
   leads: Lead[];
   onSelectLead: (lead: Lead) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<'all' | 'cu' | 'bank'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'cu' | 'bank'>('cu');
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
@@ -74,7 +75,7 @@ export default function SalesAccelerationDashboard({ leads, onSelectLead }: {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-white">{formatCurrencyShort(metrics.totalPipelineValue)}</div>
-            <div className="text-orange-100 text-xs">Pipeline Value</div>
+            <div className="text-orange-100 text-xs">Est. Pipeline Value</div>
           </div>
         </div>
       </div>
@@ -154,6 +155,20 @@ export default function SalesAccelerationDashboard({ leads, onSelectLead }: {
                     <span className={`px-2 py-0.5 rounded text-xs font-medium border ${urgencyColors[lead.urgencyLevel]}`}>
                       {lead.urgencyLevel}
                     </span>
+                    {lead.callReport && (() => {
+                      const health = computeFinancialHealth(lead.callReport);
+                      return (
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5 ${
+                          health.riskLevel === 'low' ? 'bg-green-50 text-green-600' :
+                          health.riskLevel === 'moderate' ? 'bg-yellow-50 text-yellow-600' :
+                          health.riskLevel === 'elevated' ? 'bg-orange-50 text-orange-600' :
+                          'bg-red-50 text-red-600'
+                        }`}>
+                          <Activity className="w-2.5 h-2.5" />
+                          {health.overall}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
@@ -307,6 +322,7 @@ export default function SalesAccelerationDashboard({ leads, onSelectLead }: {
             </div>
           ))}
         </div>
+        <p className="text-[10px] text-gray-400 italic mt-2">Deal values and product-fit scores are estimates based on institution profile. Institution data from NCUA & FDIC.</p>
       </div>
     </div>
   );

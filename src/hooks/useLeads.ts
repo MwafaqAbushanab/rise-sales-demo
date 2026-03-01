@@ -43,7 +43,14 @@ export function useLeads() {
       ]);
       const bankLeads = banksData.map(bankToLead);
       const cuLeads = creditUnionsData.map(creditUnionToLead);
-      const allLeads = [...bankLeads, ...cuLeads].sort((a, b) => b.assets - a.assets);
+      // Sort by assets descending, with credit unions first at equal asset levels
+      const allLeads = [...cuLeads, ...bankLeads].sort((a, b) => {
+        const assetDiff = b.assets - a.assets;
+        if (assetDiff !== 0) return assetDiff;
+        if (a.type === 'Credit Union' && b.type !== 'Credit Union') return -1;
+        if (b.type === 'Credit Union' && a.type !== 'Credit Union') return 1;
+        return 0;
+      });
 
       // Apply saved pipeline overrides
       allLeads.forEach(lead => {

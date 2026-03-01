@@ -25,7 +25,7 @@ export default function GettingStarted({
     {
       id: 'data-loaded',
       title: 'Institution Data',
-      description: leadsLoaded ? 'Real data from NCUA & FDIC loaded' : 'Loading institutions...',
+      description: leadsLoaded ? 'Credit union & bank data loaded from NCUA & FDIC' : 'Loading credit unions...',
       complete: leadsLoaded,
       icon: leadsLoaded ? CheckCircle : Loader2,
       color: leadsLoaded ? 'text-green-500' : 'text-blue-500'
@@ -33,7 +33,7 @@ export default function GettingStarted({
     {
       id: 'select-lead',
       title: 'Select a Prospect',
-      description: 'Click any institution to view AI insights',
+      description: 'Click any credit union to view AI insights',
       complete: false,
       icon: Target,
       color: 'text-purple-500'
@@ -65,8 +65,8 @@ export default function GettingStarted({
     },
     {
       id: 'expansion',
-      title: 'Market Expansion',
-      description: 'Community bank in new territory',
+      title: 'Growth CU',
+      description: 'Fast-growing credit union ready for analytics',
       icon: Globe,
       color: 'bg-green-100 text-green-700'
     }
@@ -88,7 +88,7 @@ export default function GettingStarted({
         </div>
         <div>
           <h2 className="text-xl font-bold">Welcome to Rise Sales Agent</h2>
-          <p className="text-blue-100 text-sm">AI-powered sales acceleration for Credit Unions & Banks</p>
+          <p className="text-blue-100 text-sm">AI-powered sales intelligence for Credit Unions</p>
         </div>
       </div>
 

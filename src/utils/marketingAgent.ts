@@ -133,11 +133,11 @@ export const RISE_ANALYTICS_PROFILE = {
   ],
 
   customerSuccess: {
-    clientCount: '150+',
-    averageROI: '211%',
-    averagePayback: '4.2 months',
+    clientCount: '150+ (estimated)',
+    averageROI: '150-200% (estimated)',
+    averagePayback: '4-6 months (estimated)',
     netPromoterScore: 72,
-    customerRetention: '96%',
+    customerRetention: '96% (estimated)',
     testimonials: [
       {
         quote: 'Rise Analytics transformed how we understand our members. We went from monthly Excel reports to real-time dashboards in weeks.',
@@ -155,9 +155,7 @@ export const RISE_ANALYTICS_PROFILE = {
   },
 
   awards: [
-    { name: 'Best Analytics Platform - Credit Union Technology Awards', year: 2024 },
-    { name: 'Top 50 FinTech Companies to Watch', year: 2024 },
-    { name: 'CU Times Best of Show - Technology Conference', year: 2023 },
+    // Add verified awards only — placeholder entries removed
   ],
 };
 
@@ -443,7 +441,7 @@ export function generateBlogOutline(topic: string, targetAudience: 'credit_union
 
 ## SEO Elements
 - **Target keyword**: "${targetAudience === 'credit_union' ? 'credit union' : 'community bank'} analytics ROI"
-- **Meta description**: "Discover how ${audienceLabel.toLowerCase()} achieve 211% average ROI with modern analytics. Data-driven analysis of the four pillars of analytics ROI."
+- **Meta description**: "Discover how ${audienceLabel.toLowerCase()} achieve 150-200% estimated ROI with modern analytics. Data-driven analysis of the four pillars of analytics ROI."
 - **Internal links**: Product pages, case studies, ROI calculator
 `,
     },
@@ -745,7 +743,7 @@ ${response}
 ## Proof Points
 - 150+ credit unions and community banks trust Rise Analytics
 - Average go-live time: 4-6 weeks
-- Average client ROI: 211%
+- Average client ROI: 150-200% (estimated)
 - Customer retention rate: 96%
 `;
 
@@ -803,8 +801,8 @@ Rise Analytics is a cloud-native business intelligence and data analytics platfo
 - Enterprise: $10,000-$75,000/month
 
 ## Results Customers Achieve
-- 211% average ROI
-- 4.2 month average payback period
+- 150-200% estimated average ROI
+- 4-6 month estimated payback period
 - 65% reduction in reporting time
 - 15% improvement in member retention
 

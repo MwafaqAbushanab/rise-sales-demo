@@ -191,24 +191,24 @@ export function calculateROI(inputs: ROIInputs): ROIProjection {
   // Cap effective members for ROI calculation to avoid unrealistic projections for mega-banks
   // Rise Analytics is designed for credit unions and community banks, not trillion-dollar institutions
   const rawEffectiveMembers = estimateCustomerCount(assets, members, type);
-  const effectiveMembers = Math.min(rawEffectiveMembers, 100000); // Cap at 100K members for ROI calc
+  const effectiveMembers = Math.min(rawEffectiveMembers, 250000); // Cap at 250K members for ROI calc
 
   const currentAttritionLoss = effectiveMembers * memberAttritionRate * avgMemberValue;
   const rawAttritionReduction = currentAttritionLoss * BENCHMARKS.attritionReductionRate;
-  // Cap attrition benefit at 3x Rise cost (realistic for analytics platform)
-  const attritionReduction = Math.min(rawAttritionReduction, riseAnnualCost * 3);
+  // Cap attrition benefit at 5x Rise cost to prevent unrealistic projections for edge cases
+  const attritionReduction = Math.min(rawAttritionReduction, riseAnnualCost * 5);
 
   // 3. Cross-sell improvement
   const currentCrossSellRevenue = effectiveMembers * crossSellRate * (avgMemberValue * 0.3); // 30% of member value from cross-sell
   const rawCrossSellImprovement = currentCrossSellRevenue * BENCHMARKS.crossSellImprovement;
-  // Cap cross-sell benefit at 2x Rise cost
-  const crossSellImprovement = Math.min(rawCrossSellImprovement, riseAnnualCost * 2);
+  // Cap cross-sell benefit at 4x Rise cost to prevent unrealistic projections
+  const crossSellImprovement = Math.min(rawCrossSellImprovement, riseAnnualCost * 4);
 
-  // 4. Loan loss reduction - cap at a reasonable percentage of Rise investment for realism
+  // 4. Loan loss reduction
   const currentLoanLosses = totalLoanPortfolio * loanDefaultRate;
-  // Cap loan loss savings at 2x Rise cost (conservative - this is the hardest to prove)
+  // Cap loan loss savings at 3x Rise cost to prevent unrealistic projections
   const rawLoanLossReduction = currentLoanLosses * BENCHMARKS.loanDefaultReduction;
-  const loanLossReduction = Math.min(rawLoanLossReduction, riseAnnualCost * 2);
+  const loanLossReduction = Math.min(rawLoanLossReduction, riseAnnualCost * 3);
 
   // Total annual benefit
   const totalAnnualBenefit = reportingTimeSavings + attritionReduction + crossSellImprovement + loanLossReduction;
@@ -314,11 +314,11 @@ export function formatCurrencyShort(value: number): string {
 }
 
 export function generateROISummary(projection: ROIProjection, leadName: string): string {
-  return `**ROI Summary for ${leadName}:**
+  return `**ROI Summary for ${leadName} (Estimated):**
 
 💰 **Investment:** ${formatCurrencyShort(projection.riseMonthlyCost * 12)}/year
 
-📈 **Projected Annual Benefits:**
+📈 **Projected Annual Benefits (estimated based on industry benchmarks):**
 • Reporting Efficiency: ${formatCurrencyShort(projection.reportingTimeSavings)}
 • Retention Improvement: ${formatCurrencyShort(projection.attritionReduction)}
 • Cross-Sell Growth: ${formatCurrencyShort(projection.crossSellImprovement)}

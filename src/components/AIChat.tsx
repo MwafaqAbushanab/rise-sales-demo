@@ -21,7 +21,7 @@ interface AIChatProps {
 
 export default function AIChat({ selectedLead, intelligence, competitiveIntel }: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: `Hi! I'm your Rise Analytics AI Sales Agent powered by Claude. ${selectedLead ? `I see you're looking at ${selectedLead.name}. How can I help you engage with this prospect?` : 'Select a credit union or bank from the list to get started. I can help with personalized outreach, qualification analysis, competitive positioning, and more.'}` }
+    { role: 'assistant', content: `Hi! I'm your Rise Analytics AI Sales Agent. ${selectedLead ? `I see you're looking at ${selectedLead.name}. How can I help you engage with this prospect?` : 'Select a credit union from the list to get started. I can help with personalized outreach, qualification analysis, competitive positioning, and more.'}` }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);

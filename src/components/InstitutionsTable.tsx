@@ -1,13 +1,20 @@
-import { Search, Users, Landmark, Zap, Building2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, Users, Landmark, Zap, Building2, Loader2, ChevronLeft, ChevronRight, Download, Mail } from 'lucide-react';
 import type { Lead } from '../types';
 import { formatCurrency, statusColors, formatStatus } from '../types';
 import { ASSET_SIZE_FILTERS } from '../api/fdicApi';
 import { usePagination } from '../hooks/usePagination';
+import { exportICPMatchesToCSV, type ICPMatch } from '../utils/prospectFinder';
+import SavedFilters from './SavedFilters';
+
+const ALL_STATUSES = ['new', 'contacted', 'qualified', 'demo_scheduled', 'proposal_sent', 'won', 'lost'];
 
 interface InstitutionsTableProps {
   leads: Lead[];
   selectedLead: Lead | null;
   onSelectLead: (lead: Lead) => void;
+  onUpdateLead: (id: string, updates: Partial<Lead>) => void;
+  onComposeEmail: (lead: Lead) => void;
   loading: boolean;
   searchTerm: string;
   onSearchChange: (term: string) => void;
@@ -20,12 +27,44 @@ interface InstitutionsTableProps {
   statusFilter: string;
   onStatusFilterChange: (filter: string) => void;
   availableStates: string[];
+  icpMatches?: ICPMatch[] | null;
+}
+
+function escapeCsvValue(val: string): string {
+  if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+    return `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
+}
+
+function exportLeadsToCsv(leads: Lead[]) {
+  const headers = ['Name', 'Type', 'City', 'State', 'Assets', 'Members', 'Deposits', 'ROA', 'Score', 'Status', 'Recommended Products', 'Contact', 'Email', 'Phone', 'Notes', 'Website'];
+  const rows = leads.map(l => [
+    l.name, l.type, l.city, l.state,
+    l.assets.toString(), l.members.toString(), l.deposits.toString(),
+    l.roa.toFixed(2), l.score.toString(), formatStatus(l.status),
+    l.recommendedProducts.join('; '),
+    l.contact, l.email, l.phone, l.notes, l.website,
+  ].map(escapeCsvValue));
+
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rise-leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export default function InstitutionsTable({
   leads,
   selectedLead,
   onSelectLead,
+  onUpdateLead,
+  onComposeEmail,
   loading,
   searchTerm,
   onSearchChange,
@@ -38,6 +77,7 @@ export default function InstitutionsTable({
   statusFilter,
   onStatusFilterChange,
   availableStates,
+  icpMatches,
 }: InstitutionsTableProps) {
   const {
     page,
@@ -49,16 +89,67 @@ export default function InstitutionsTable({
     prevPage,
   } = usePagination(leads, 25);
 
+  const [editingStatusId, setEditingStatusId] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setEditingStatusId(null);
+      }
+    }
+    if (editingStatusId) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [editingStatusId]);
+
+  const handleStatusChange = (leadId: string, newStatus: string) => {
+    onUpdateLead(leadId, { status: newStatus });
+    setEditingStatusId(null);
+  };
+
+  const handleApplyFilter = (filters: { searchTerm: string; statusFilter: string; typeFilter: string; stateFilter: string; assetFilter: string }) => {
+    onSearchChange(filters.searchTerm);
+    onTypeFilterChange(filters.typeFilter);
+    onStateFilterChange(filters.stateFilter);
+    onAssetFilterChange(filters.assetFilter);
+    onStatusFilterChange(filters.statusFilter);
+  };
+
   const startIndex = (page - 1) * pageSize + 1;
   const endIndex = Math.min(page * pageSize, leads.length);
 
   return (
     <div className="col-span-2 bg-white rounded-xl shadow-sm border">
       <div className="p-4 border-b">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Institutions Pipeline</h2>
-          <span className="text-sm text-gray-500">{leads.length.toLocaleString()} results</span>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-gray-900">
+            {icpMatches ? `Prospect Finder Results — ${icpMatches.length} matches` : 'Institutions Pipeline'}
+          </h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => icpMatches ? exportICPMatchesToCSV(icpMatches) : exportLeadsToCsv(leads)}
+              disabled={leads.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Export filtered leads to CSV"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+            <span className="text-sm text-gray-500">{leads.length.toLocaleString()} results</span>
+          </div>
         </div>
+
+        {/* Saved Filters */}
+        <div className="mb-3">
+          <SavedFilters
+            currentFilters={{ searchTerm, statusFilter, typeFilter, stateFilter, assetFilter }}
+            onApplyFilter={handleApplyFilter}
+          />
+        </div>
+
         <div className="flex gap-3 flex-wrap">
           <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -117,7 +208,7 @@ export default function InstitutionsTable({
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-            <span className="ml-3 text-gray-600">Loading institutions from NCUA & FDIC...</span>
+            <span className="ml-3 text-gray-600">Loading credit unions & banks from NCUA & FDIC...</span>
           </div>
         ) : leads.length === 0 ? (
           <div className="text-center py-20 text-gray-500">
@@ -132,8 +223,10 @@ export default function InstitutionsTable({
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Institution</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assets</th>
+                {icpMatches && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Match</th>}
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-10">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -173,6 +266,25 @@ export default function InstitutionsTable({
                       <div className="text-xs text-gray-500">{lead.members.toLocaleString()} members</div>
                     )}
                   </td>
+                  {icpMatches && (() => {
+                    const match = icpMatches.find(m => m.lead.id === lead.id);
+                    return (
+                      <td className="px-4 py-3">
+                        {match ? (
+                          <div>
+                            <span className={`text-sm font-bold ${match.matchScore >= 90 ? 'text-green-600' : match.matchScore >= 80 ? 'text-blue-600' : match.matchScore >= 70 ? 'text-amber-600' : 'text-gray-500'}`}>
+                              {match.matchScore}%
+                            </span>
+                            {match.matchReasons.length > 0 && (
+                              <p className="text-[10px] text-gray-400 truncate max-w-[120px]" title={match.matchReasons.join(', ')}>{match.matchReasons[0]}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                    );
+                  })()}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className={`text-lg font-bold ${
@@ -183,10 +295,57 @@ export default function InstitutionsTable({
                       {lead.score >= 85 && <Zap className="w-4 h-4 text-amber-500" />}
                     </div>
                   </td>
+                  <td className="px-4 py-3 relative">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingStatusId(editingStatusId === lead.id ? null : lead.id);
+                      }}
+                    >
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer hover:ring-2 hover:ring-blue-300 transition-all ${statusColors[lead.status]}`}>
+                        {formatStatus(lead.status)}
+                      </span>
+                    </div>
+
+                    {/* Status Dropdown */}
+                    {editingStatusId === lead.id && (
+                      <div
+                        ref={dropdownRef}
+                        className="absolute z-20 top-full left-0 mt-1 bg-white rounded-lg shadow-lg border py-1 min-w-[160px]"
+                      >
+                        {ALL_STATUSES.map((s) => (
+                          <button
+                            key={s}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(lead.id, s);
+                            }}
+                            className={`w-full px-3 py-1.5 text-left text-xs hover:bg-gray-50 flex items-center gap-2 transition-colors ${
+                              lead.status === s ? 'bg-blue-50 font-semibold' : ''
+                            }`}
+                          >
+                            <span className={`inline-block w-2 h-2 rounded-full ${
+                              statusColors[s]?.replace(/text-\S+/, '').replace('bg-', 'bg-').trim() || 'bg-gray-300'
+                            }`} />
+                            <span className={`px-1.5 py-0.5 rounded text-xs ${statusColors[s]}`}>
+                              {formatStatus(s)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[lead.status]}`}>
-                      {formatStatus(lead.status)}
-                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onComposeEmail(lead);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Compose email"
+                    >
+                      <Mail className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -120,10 +120,10 @@ export const OBJECTION_LIBRARY: ObjectionResponse[] = [
   {
     objection: "Your solution is too expensive",
     category: 'price',
-    response: "I understand budget is a concern. Let me share some context: our average customer sees 211% ROI within the first year, with payback in just 4.2 months. For an institution your size, we estimate $[ANNUAL_BENEFIT] in annual value from efficiency gains alone. Would it help to walk through the specific ROI calculation for [INSTITUTION_NAME]?",
+    response: "I understand budget is a concern. Let me share some context: our average customer sees 150-200% estimated ROI within the first year, with payback typically in 4-6 months. For an institution your size, we estimate $[ANNUAL_BENEFIT] in annual value from efficiency gains alone. Would it help to walk through the specific ROI calculation for [INSTITUTION_NAME]?",
     proofPoints: [
-      "211% average first-year ROI across 150+ customers",
-      "4.2 month average payback period",
+      "150-200% estimated first-year ROI based on customer averages",
+      "4-6 month estimated payback period",
       "20-30% reduction in reporting time",
       "15% improvement in loan decisioning speed"
     ],
@@ -159,7 +159,7 @@ export const OBJECTION_LIBRARY: ObjectionResponse[] = [
     proofPoints: [
       "Integrated with 15+ core banking systems",
       "Data validation tools for conversion accuracy",
-      "Same-day go-live with new core systems"
+      "4-6 week implementation alongside new core systems"
     ],
     followUp: "Who's leading your conversion project? I'd love to share some best practices."
   },
@@ -256,7 +256,7 @@ export const OBJECTION_LIBRARY: ObjectionResponse[] = [
     proofPoints: [
       "Profitable company since 2021",
       "40% YoY revenue growth",
-      "150+ customers (95% retention)",
+      "150+ customers (96% estimated retention)",
       "Full data portability guaranteed"
     ],
     followUp: "Can I share our annual report and customer growth timeline?"
@@ -641,7 +641,7 @@ Best,
 
 Following up on my earlier note. Thought you might find this interesting:
 
-We recently published a study showing credit unions are achieving 211% ROI on analytics investments, with payback in under 5 months.
+We recently published a study showing credit unions are achieving 150-200% estimated ROI on analytics investments, with payback typically in 4-6 months.
 
 Here's the key insight: institutions spending 15+ hours/month on manual reporting are seeing the biggest gains.
 

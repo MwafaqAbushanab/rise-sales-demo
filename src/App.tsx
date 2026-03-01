@@ -1,9 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import { Building2, DollarSign, Filter, Target } from 'lucide-react';
+import { Building2, DollarSign, Filter, Target, LayoutGrid, List } from 'lucide-react';
 import { analyzeProspect, type ProspectIntelligence } from './utils/prospectingIntelligence';
 import { analyzeCompetitiveLandscape, type CompetitiveIntel } from './utils/competitiveIntelligence';
 import { identifyHotLeads } from './utils/salesAcceleration';
+import { matchLeadsToICP, type ICPCriteria, type ICPMatch } from './utils/prospectFinder';
 import { useLeads } from './hooks/useLeads';
 import { useAIHealth } from './hooks/useAIHealth';
 import { formatCurrency, type Lead } from './types';
@@ -15,8 +16,14 @@ import GettingStarted from './components/GettingStarted';
 import ExecutiveSummary from './components/ExecutiveSummary';
 import InstitutionsTable from './components/InstitutionsTable';
 import IntelligencePanel from './components/IntelligencePanel';
+import LeadDetailPanel from './components/LeadDetailPanel';
+import PipelineBoard from './components/PipelineBoard';
+import ICPBuilder from './components/ICPBuilder';
 import AIChat from './components/AIChat';
 import ROICalculatorModal from './components/ROICalculatorModal';
+import EmailComposer from './components/EmailComposer';
+import PreCallPrepDashboard from './components/dashboards/PreCallPrep';
+import TriggerAlertsDashboard from './components/dashboards/TriggerAlerts';
 import SalesAccelerationDashboard from './components/dashboards/SalesAcceleration';
 import TerritoryIntelligenceDashboard from './components/dashboards/TerritoryIntelligence';
 import DealCoachingDashboard from './components/dashboards/DealCoaching';
@@ -24,7 +31,7 @@ import MarketingAgentDashboard from './components/dashboards/MarketingAgent';
 
 export default function App() {
   const {
-    leads, filteredLeads, loading, error, fetchData, availableStates,
+    leads, filteredLeads, loading, error, fetchData, availableStates, updateLead,
     searchTerm, setSearchTerm,
     statusFilter, setStatusFilter,
     typeFilter, setTypeFilter,
@@ -37,6 +44,12 @@ export default function App() {
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showROICalculator, setShowROICalculator] = useState(false);
+  const [showEmailComposer, setShowEmailComposer] = useState(false);
+  const [emailComposerLead, setEmailComposerLead] = useState<Lead | null>(null);
+  const [pipelineView, setPipelineView] = useState<'table' | 'board'>(() => {
+    return (localStorage.getItem('pipelineView') as 'table' | 'board') || 'table';
+  });
+  const [icpCriteria, setICPCriteria] = useState<ICPCriteria | null>(null);
   const [showGettingStarted, setShowGettingStarted] = useState(() => {
     return localStorage.getItem('hideGettingStarted') !== 'true';
   });
@@ -58,10 +71,11 @@ export default function App() {
             .sort((a, b) => b.assets - a.assets)[0];
           break;
         case 'competitive':
-          targetLead = leads.find(l => l.state === 'TX' && l.assets >= 500000000 && l.assets <= 5000000000);
+          targetLead = leads.find(l => l.type === 'Credit Union' && l.state === 'TX' && l.assets >= 500000000 && l.assets <= 5000000000)
+            || leads.find(l => l.state === 'TX' && l.assets >= 500000000 && l.assets <= 5000000000);
           break;
         case 'expansion':
-          targetLead = leads.find(l => l.type === 'Community Bank' && l.assets >= 100000000);
+          targetLead = leads.find(l => l.type === 'Credit Union' && l.assets >= 100000000 && l.assets <= 1000000000);
           break;
       }
       if (targetLead) {
@@ -70,6 +84,16 @@ export default function App() {
       }
     }
   }, [leads, navigate]);
+
+  const handleComposeEmail = useCallback((lead: Lead) => {
+    setEmailComposerLead(lead);
+    setShowEmailComposer(true);
+  }, []);
+
+  const handleToggleView = useCallback((view: 'table' | 'board') => {
+    setPipelineView(view);
+    localStorage.setItem('pipelineView', view);
+  }, []);
 
   const selectedLeadIntelligence = useMemo((): ProspectIntelligence | null => {
     if (!selectedLead || leads.length === 0) return null;
@@ -100,12 +124,17 @@ export default function App() {
     return identifyHotLeads(leads);
   }, [leads]);
 
+  const icpMatches: ICPMatch[] | null = useMemo(() => {
+    if (!icpCriteria || leads.length === 0) return null;
+    return matchLeadsToICP(leads, icpCriteria);
+  }, [icpCriteria, leads]);
+
   const stats = useMemo(() => [
     {
       label: 'Total Institutions',
       value: leads.length.toLocaleString(),
       icon: Building2,
-      change: `${leads.filter(l => l.type === 'Credit Union').length} CUs / ${leads.filter(l => l.type === 'Community Bank').length} Banks`,
+      change: `${leads.filter(l => l.type === 'Credit Union').length} Credit Unions · ${leads.filter(l => l.type === 'Community Bank').length} Banks`,
       color: 'text-blue-600'
     },
     {
@@ -179,29 +208,94 @@ export default function App() {
                 </div>
               </ErrorBoundary>
 
-              {/* Full-width institutions table */}
-              <ErrorBoundary fallbackTitle="Institutions table failed to load">
-                <InstitutionsTable
-                  leads={filteredLeads}
-                  selectedLead={selectedLead}
-                  onSelectLead={setSelectedLead}
-                  loading={loading}
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  typeFilter={typeFilter}
-                  onTypeFilterChange={setTypeFilter}
-                  stateFilter={stateFilter}
-                  onStateFilterChange={setStateFilter}
-                  assetFilter={assetFilter}
-                  onAssetFilterChange={setAssetFilter}
-                  statusFilter={statusFilter}
-                  onStatusFilterChange={setStatusFilter}
+              {/* ICP Prospect Finder */}
+              <ErrorBoundary fallbackTitle="ICP Builder failed to load">
+                <ICPBuilder
+                  onApplyCriteria={setICPCriteria}
                   availableStates={availableStates}
+                  isActive={icpCriteria !== null}
+                  activeCriteria={icpCriteria}
                 />
               </ErrorBoundary>
 
-              {/* Intelligence + AI Chat side by side */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              {/* View Toggle */}
+              <div className="flex items-center justify-end mb-4">
+                <div className="flex items-center bg-white border rounded-lg p-0.5 shadow-sm">
+                  <button
+                    onClick={() => handleToggleView('table')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      pipelineView === 'table'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <List className="w-3.5 h-3.5" />
+                    Table
+                  </button>
+                  <button
+                    onClick={() => handleToggleView('board')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      pipelineView === 'board'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    Board
+                  </button>
+                </div>
+              </div>
+
+              {/* Table or Board view */}
+              {pipelineView === 'table' ? (
+                <ErrorBoundary fallbackTitle="Institutions table failed to load">
+                  <InstitutionsTable
+                    leads={filteredLeads}
+                    selectedLead={selectedLead}
+                    onSelectLead={setSelectedLead}
+                    onUpdateLead={updateLead}
+                    onComposeEmail={handleComposeEmail}
+                    loading={loading}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    typeFilter={typeFilter}
+                    onTypeFilterChange={setTypeFilter}
+                    stateFilter={stateFilter}
+                    onStateFilterChange={setStateFilter}
+                    assetFilter={assetFilter}
+                    onAssetFilterChange={setAssetFilter}
+                    statusFilter={statusFilter}
+                    onStatusFilterChange={setStatusFilter}
+                    availableStates={availableStates}
+                    icpMatches={icpMatches}
+                  />
+                </ErrorBoundary>
+              ) : (
+                <ErrorBoundary fallbackTitle="Pipeline board failed to load">
+                  <PipelineBoard
+                    leads={filteredLeads}
+                    selectedLead={selectedLead}
+                    onSelectLead={setSelectedLead}
+                    onUpdateLead={updateLead}
+                    onComposeEmail={handleComposeEmail}
+                  />
+                </ErrorBoundary>
+              )}
+
+              {/* Lead Detail + Intelligence + AI Chat */}
+              <div className={`grid grid-cols-1 ${selectedLead ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6 mt-6`}>
+                {selectedLead && (
+                  <div className="min-h-[400px] max-h-[700px] overflow-hidden">
+                    <ErrorBoundary fallbackTitle="Lead detail panel failed to load">
+                      <LeadDetailPanel
+                        lead={selectedLead}
+                        onUpdateLead={updateLead}
+                        onClose={() => setSelectedLead(null)}
+                        onComposeEmail={() => handleComposeEmail(selectedLead)}
+                      />
+                    </ErrorBoundary>
+                  </div>
+                )}
                 <div className="min-h-[400px] max-h-[700px] overflow-y-auto">
                   <ErrorBoundary fallbackTitle="Intelligence panel failed to load">
                     <IntelligencePanel
@@ -209,6 +303,7 @@ export default function App() {
                       lead={selectedLead}
                       competitiveIntel={selectedLeadCompetitiveIntel}
                       onOpenROICalculator={() => setShowROICalculator(true)}
+                      onComposeEmail={() => { if (selectedLead) handleComposeEmail(selectedLead); }}
                     />
                   </ErrorBoundary>
                 </div>
@@ -223,6 +318,29 @@ export default function App() {
                 </div>
               </div>
             </>
+          } />
+
+          <Route path="/precall" element={
+            <ErrorBoundary fallbackTitle="Pre-Call Prep failed to load">
+              {!loading && leads.length > 0 ? (
+                <PreCallPrepDashboard
+                  leads={leads}
+                  selectedLead={selectedLead}
+                  onSelectLead={setSelectedLead}
+                />
+              ) : null}
+            </ErrorBoundary>
+          } />
+
+          <Route path="/alerts" element={
+            <ErrorBoundary fallbackTitle="Trigger Alerts failed to load">
+              {!loading && leads.length > 0 ? (
+                <TriggerAlertsDashboard
+                  leads={leads}
+                  onSelectLead={(lead) => setSelectedLead(lead)}
+                />
+              ) : null}
+            </ErrorBoundary>
           } />
 
           <Route path="/acceleration" element={
@@ -266,6 +384,14 @@ export default function App() {
         isOpen={showROICalculator}
         onClose={() => setShowROICalculator(false)}
       />
+
+      {emailComposerLead && (
+        <EmailComposer
+          lead={emailComposerLead}
+          isOpen={showEmailComposer}
+          onClose={() => { setShowEmailComposer(false); setEmailComposerLead(null); }}
+        />
+      )}
     </div>
   );
 }

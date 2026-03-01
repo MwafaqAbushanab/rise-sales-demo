@@ -1,7 +1,9 @@
-import { PieChart, DollarSign, TrendingUp, Globe, Landmark, Flame, Target, Activity } from 'lucide-react';
+import { useMemo } from 'react';
+import { PieChart, DollarSign, TrendingUp, Globe, Landmark, Flame, Target, Activity, Shield } from 'lucide-react';
 import type { Lead } from '../types';
 import { formatCurrency } from '../types';
 import type { HotLead } from '../utils/salesAcceleration';
+import { computeFinancialHealth } from '../utils/financialHealth';
 
 interface ExecutiveSummaryProps {
   leads: Lead[];
@@ -21,6 +23,17 @@ export default function ExecutiveSummary({ leads, hotLeads }: ExecutiveSummaryPr
   // Calculate market opportunity
   const totalMarketAssets = leads.reduce((sum, l) => sum + l.assets, 0);
   const avgLeadScore = leads.length > 0 ? Math.round(leads.reduce((sum, l) => sum + l.score, 0) / leads.length) : 0;
+
+  // Portfolio health from 5300 data
+  const portfolioHealth = useMemo(() => {
+    const cusWithData = leads.filter(l => l.callReport?.latestQuarter);
+    if (cusWithData.length === 0) return null;
+    const healthScores = cusWithData.map(l => computeFinancialHealth(l.callReport!));
+    const avgHealth = Math.round(healthScores.reduce((s, h) => s + h.overall, 0) / healthScores.length);
+    const avgDelinquency = cusWithData.reduce((s, l) => s + l.callReport!.latestQuarter.delinquencyRatio * 100, 0) / cusWithData.length;
+    const elevatedCount = healthScores.filter(h => h.riskLevel === 'elevated' || h.riskLevel === 'high').length;
+    return { avgHealth, avgDelinquency, elevatedCount, totalWithData: cusWithData.length };
+  }, [leads]);
 
   const kpis = [
     {
@@ -42,7 +55,7 @@ export default function ExecutiveSummary({ leads, hotLeads }: ExecutiveSummaryPr
     {
       label: 'Market Coverage',
       value: leads.length.toLocaleString(),
-      subtext: `${cuCount} CUs / ${bankCount} Banks`,
+      subtext: `${cuCount} Credit Unions · ${bankCount} Banks`,
       icon: Globe,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
@@ -91,7 +104,7 @@ export default function ExecutiveSummary({ leads, hotLeads }: ExecutiveSummaryPr
       </div>
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${portfolioHealth ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
           <div className="flex items-center justify-between">
             <div>
@@ -124,6 +137,29 @@ export default function ExecutiveSummary({ leads, hotLeads }: ExecutiveSummaryPr
           </div>
           <div className="text-xs text-purple-600 mt-1">Qualified / Demo / Proposal stages</div>
         </div>
+
+        {portfolioHealth && (
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4 border border-indigo-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-indigo-700">Portfolio Health</div>
+                <div className="text-3xl font-bold text-indigo-600">{portfolioHealth.avgHealth}/100</div>
+              </div>
+              <Shield className="w-10 h-10 text-indigo-500 opacity-50" />
+            </div>
+            <div className="text-xs text-indigo-600 mt-1">
+              {portfolioHealth.elevatedCount > 0 ? `${portfolioHealth.elevatedCount} at-risk` : 'All healthy'} · {portfolioHealth.avgDelinquency.toFixed(2)}% avg delinquency
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Data Source Notice */}
+      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+        <p className="text-[10px] text-gray-400">
+          Institution data: NCUA (credit unions) & FDIC (banks) — live government sources. Scores, deal sizes, and competitive intel are estimates.
+        </p>
+        <span className="text-[10px] text-gray-300 whitespace-nowrap ml-4">Rise Analytics Demo</span>
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ export default function AppHeader({ loading, onRefresh }: {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Rise Sales Agent</h1>
-              <p className="text-xs text-gray-500">Real CU/Bank Data from NCUA & FDIC</p>
+              <p className="text-xs text-gray-500">Credit Union Intelligence — Powered by NCUA & FDIC Data</p>
             </div>
           </div>
           <div className="flex items-center gap-4">

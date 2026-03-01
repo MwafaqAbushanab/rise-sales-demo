@@ -33,6 +33,7 @@ export interface CompetitiveIntel {
   winBackStrategy: string;
   displacementDifficulty: number; // 1-10
   recommendedApproach: string;
+  isSimulated: boolean; // true = inferred from institution profile, not verified
 }
 
 export interface CompetitorPresence {
@@ -81,9 +82,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'Too many vendors already': 'Rise actually reduces vendor complexity by consolidating analytics into one platform.'
       },
       proofPoints: [
-        '47 JH clients added Rise in 2024',
-        'Average 23% improvement in cross-sell rates',
-        'One JH client saved $180K/year by consolidating 4 reporting tools'
+        'Multiple Jack Henry clients have adopted Rise Analytics alongside their existing core (illustrative)',
+        'Customers report improved cross-sell rates after gaining unified member visibility',
+        'Clients typically save on reporting costs by consolidating multiple analytics tools'
       ],
       avoidSaying: [
         'Never directly criticize Jack Henry',
@@ -133,9 +134,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'Budget is tight': 'Show them our ROI calculator - average payback in 8 months.'
       },
       proofPoints: [
-        '62 Fiserv clients using Rise Analytics',
-        'Fiserv clients see 31% faster reporting cycles',
-        'Net Promoter Score 72 (vs industry avg 34)'
+        'Multiple Fiserv clients using Rise Analytics alongside their core (illustrative)',
+        'Customers report significantly faster reporting cycles with Rise',
+        'High customer satisfaction scores based on customer surveys (estimated)'
       ],
       avoidSaying: [
         'Don\'t mention Fiserv service issues unprompted',
@@ -185,9 +186,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'Need to focus on core first': 'Rise deploys in weeks, not months. We won\'t distract from your core initiatives.'
       },
       proofPoints: [
-        '23 KeyStone clients chose Rise',
-        'Average implementation: 6 weeks',
-        'KeyStone CEO recommends Rise at conferences'
+        'Multiple KeyStone clients have adopted Rise for advanced analytics (illustrative)',
+        'Typical implementation completes in 4-6 weeks',
+        'Strong partnership positioning with Corelation ecosystem'
       ],
       avoidSaying: [
         'Don\'t imply KeyStone is inadequate',
@@ -237,9 +238,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'Budget constraints': 'Rise often SAVES money by reducing custom report requests to CU*A.'
       },
       proofPoints: [
-        '18 CU*A clients using Rise',
-        'Average 40% reduction in report request tickets',
-        'Self-service adoption rate of 89%'
+        'CU*Answers clients have adopted Rise for deeper analytics (illustrative)',
+        'Customers report significant reduction in ad-hoc report requests',
+        'High self-service adoption rate among business users (estimated)'
       ],
       avoidSaying: [
         'Don\'t criticize CUSO model',
@@ -289,9 +290,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'Don\'t need more analytics': 'Show them the blind spots - members who are digital AND branch users.'
       },
       proofPoints: [
-        '34 Q2 clients also use Rise',
-        '28% improvement in digital adoption insights',
-        'One client discovered $2M in missed cross-sell opportunities'
+        'Q2 clients use Rise to complement digital banking with deep analytics (illustrative)',
+        'Customers report improved digital adoption insights with unified data',
+        'Clients discover significant cross-sell opportunities through member analytics'
       ],
       avoidSaying: [
         'Don\'t position as Q2 replacement',
@@ -341,9 +342,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'Consolidating vendors': 'Rise focuses on analytics so Alkami can focus on digital experience.'
       },
       proofPoints: [
-        '21 Alkami clients using Rise',
-        'Enterprise analytics live in 4-6 weeks',
-        'Clients report clearer ROI than Segmint'
+        'Alkami clients use Rise for enterprise-grade analytics (illustrative)',
+        'Typical enterprise analytics deployment in 4-6 weeks',
+        'Customers report clear, measurable ROI from analytics investment'
       ],
       avoidSaying: [
         'Don\'t bash Segmint acquisition',
@@ -393,9 +394,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'IT chose Tableau': 'Ask IT how long until FI dashboards are ready. Rise is ready in weeks.'
       },
       proofPoints: [
-        '31 FIs switched from Tableau to Rise',
-        'Average 65% reduction in time to insight',
-        'Business users self-serve in Rise (vs IT dependency in Tableau)'
+        'Financial institutions have switched from Tableau to Rise for purpose-built FI analytics (illustrative)',
+        'Customers report significant reduction in time to insight vs general BI tools',
+        'Business users self-serve in Rise without IT dependency'
       ],
       avoidSaying: [
         'Don\'t say Tableau is bad',
@@ -445,9 +446,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'IT prefers Microsoft': 'Rise works with Microsoft stack. IT can focus on infrastructure, Rise handles FI analytics.'
       },
       proofPoints: [
-        '44 FIs moved from Power BI to Rise',
-        'Average 6 months saved vs DIY Power BI',
-        'One FI calculated $340K in hidden Power BI costs'
+        'Financial institutions have moved from Power BI to Rise for ready-made FI analytics (illustrative)',
+        'Customers report months saved vs building custom Power BI dashboards',
+        'Clients discover hidden costs in maintaining DIY analytics solutions'
       ],
       avoidSaying: [
         'Don\'t say Power BI is bad',
@@ -497,9 +498,9 @@ export const COMPETITORS: Record<string, Competitor> = {
         'Too busy to implement': 'Rise implements alongside your team with minimal disruption.'
       },
       proofPoints: [
-        'Average 73% reduction in reporting time',
-        '91% reduction in data errors',
-        'One FI freed 2 FTEs from manual reporting'
+        'Customers report significant reduction in manual reporting time (estimated)',
+        'Automated data pipelines reduce manual errors substantially',
+        'Institutions free up staff time previously spent on manual reporting'
       ],
       avoidSaying: [
         'Don\'t belittle their current efforts',
@@ -698,7 +699,8 @@ export function analyzeCompetitiveLandscape(
     competitiveThreats: threats,
     winBackStrategy,
     displacementDifficulty,
-    recommendedApproach
+    recommendedApproach,
+    isSimulated: true
   };
 }
 

@@ -5,17 +5,23 @@ import { getTierColor, getTierEmoji } from '../utils/prospectingIntelligence';
 import type { CompetitiveIntel } from '../utils/competitiveIntelligence';
 import { calculateWinProbability } from '../utils/competitiveIntelligence';
 import { calculateROI, getDefaultInputs, calculateRisePricing, formatCurrencyShort } from '../utils/roiCalculator';
-import { Brain, Award, TrendingUp, Zap, ShoppingCart, ChevronDown, ChevronUp, Swords, Shield, Target, Eye, Trophy, CheckCircle, AlertTriangle, Lightbulb, Calculator, Percent, Clock } from 'lucide-react';
+import { useCallReport } from '../hooks/useCallReport';
+import FinancialHealthCard from './FinancialHealthCard';
+import { Brain, Award, TrendingUp, Zap, ShoppingCart, ChevronDown, ChevronUp, Swords, Shield, Target, Eye, Trophy, CheckCircle, AlertTriangle, Lightbulb, Calculator, Percent, Clock, Mail, Activity, Users } from 'lucide-react';
+import ContactsCard from './ContactsCard';
 
 interface IntelligencePanelProps {
   intelligence: ProspectIntelligence | null;
   lead: Lead | null;
   competitiveIntel: CompetitiveIntel | null;
   onOpenROICalculator: () => void;
+  onComposeEmail: () => void;
 }
 
-export default function IntelligencePanel({ intelligence, lead, competitiveIntel, onOpenROICalculator }: IntelligencePanelProps) {
+export default function IntelligencePanel({ intelligence, lead, competitiveIntel, onOpenROICalculator, onComposeEmail }: IntelligencePanelProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    contacts: true,
+    financial: true,
     growth: false,
     tech: false,
     buying: true,
@@ -24,6 +30,11 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
     roi: true
   });
   const [selectedBattleCard, setSelectedBattleCard] = useState<string | null>(null);
+
+  // Load NCUA 5300 Call Report data for CU leads
+  const { callReport, financialHealth, loading: crLoading } = useCallReport(
+    lead?.type === 'Credit Union' ? lead.certNumber : undefined
+  );
 
   // Quick ROI preview
   const quickROI = useMemo(() => {
@@ -68,6 +79,14 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
               <p className="text-xs text-purple-100">AI-Powered Analysis</p>
             </div>
           </div>
+          <button
+            onClick={onComposeEmail}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-medium transition-colors"
+            title="Compose email for this lead"
+          >
+            <Mail className="w-3.5 h-3.5" />
+            Email
+          </button>
         </div>
       </div>
 
@@ -97,7 +116,7 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
             </div>
           </div>
           <div className="mt-3 text-sm text-gray-600">
-            <strong>Deal Size:</strong> {intelligence.estimatedDealSize}
+            <strong>Est. Deal Size:</strong> {intelligence.estimatedDealSize} <span className="text-[10px] text-gray-400">(illustrative)</span>
           </div>
         </div>
 
@@ -142,6 +161,67 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
             )}
           </div>
         </div>
+
+        {/* Decision Makers (Apollo.io) */}
+        <div className="bg-white rounded-xl border overflow-hidden">
+          <button
+            onClick={() => toggleSection('contacts')}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              <span className="font-semibold text-gray-800">Decision Makers</span>
+              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-[10px] font-medium">Apollo</span>
+            </div>
+            {expandedSections.contacts ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+          {expandedSections.contacts && (
+            <div className="px-4 pb-4">
+              <ContactsCard institutionId={lead.id} companyName={lead.name} />
+            </div>
+          )}
+        </div>
+
+        {/* Financial Deep Dive (CU only, from NCUA 5300) */}
+        {lead.type === 'Credit Union' && (
+          <div className="bg-white rounded-xl border overflow-hidden">
+            <button
+              onClick={() => toggleSection('financial')}
+              className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Activity className="w-5 h-5 text-indigo-600" />
+                <span className="font-semibold text-gray-800">Financial Deep Dive</span>
+                {financialHealth && (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    financialHealth.riskLevel === 'low' ? 'bg-green-100 text-green-700' :
+                    financialHealth.riskLevel === 'moderate' ? 'bg-yellow-100 text-yellow-700' :
+                    financialHealth.riskLevel === 'elevated' ? 'bg-orange-100 text-orange-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {financialHealth.overall}/100
+                  </span>
+                )}
+                <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded text-[10px] font-medium">5300</span>
+              </div>
+              {expandedSections.financial ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </button>
+            {expandedSections.financial && (
+              <div className="px-4 pb-4">
+                {crLoading ? (
+                  <div className="text-center py-4 text-sm text-gray-500">Loading 5300 data...</div>
+                ) : callReport && financialHealth ? (
+                  <FinancialHealthCard callReport={callReport} financialHealth={financialHealth} />
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500">No 5300 Call Report data available for this institution.</p>
+                    <p className="text-xs text-gray-400 mt-1">Basic financial metrics shown above from NCUA Socrata data.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Growth Signals */}
         <div className="bg-white rounded-xl border overflow-hidden">
@@ -297,6 +377,8 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
             </button>
             {expandedSections.competitive && (
               <div className="px-4 pb-4 space-y-3">
+                {/* Disclaimer */}
+                <p className="text-[10px] text-gray-400 italic">Competitor presence inferred from institution profile — not verified. Win rates are illustrative.</p>
                 {/* Displacement Difficulty */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                   <div>
@@ -385,7 +467,7 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
                               </ul>
                             </div>
                             <div className="p-2 bg-amber-50 rounded border border-amber-200">
-                              <p className="text-xs font-medium text-amber-800">Rise Win Rate vs {cp.competitor.name}:</p>
+                              <p className="text-xs font-medium text-amber-800">Rise Win Rate vs {cp.competitor.name}: <span className="font-normal text-amber-600">(illustrative)</span></p>
                               <p className="text-lg font-bold text-amber-700">{cp.competitor.winRate}%</p>
                             </div>
                           </div>
@@ -483,8 +565,9 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
                 <Calculator className="w-5 h-5 text-emerald-600" />
                 <span className="font-semibold text-gray-800">ROI Calculator</span>
                 <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
-                  {quickROI.annualROI}% ROI
+                  ~{quickROI.annualROI}% ROI
                 </span>
+                <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[10px]">est.</span>
               </div>
               {expandedSections.roi ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
             </button>
@@ -538,6 +621,8 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
                     </div>
                   ))}
                 </div>
+
+                <p className="text-[10px] text-gray-400 italic">ROI projections are estimates based on industry benchmarks and may vary.</p>
 
                 {/* Open Full Calculator Button */}
                 <button

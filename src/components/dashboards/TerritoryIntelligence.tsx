@@ -121,7 +121,7 @@ export default function TerritoryIntelligenceDashboard({ leads }: { leads: Lead[
                 </div>
                 <div className="text-2xl font-bold text-gray-900">{leads.length.toLocaleString()}</div>
                 <div className="text-xs text-gray-600 mt-1">
-                  {leads.filter(l => l.type === 'Credit Union').length} CUs / {leads.filter(l => l.type === 'Community Bank').length} Banks
+                  {leads.filter(l => l.type === 'Credit Union').length} Credit Unions · {leads.filter(l => l.type === 'Community Bank').length} Banks
                 </div>
               </div>
 

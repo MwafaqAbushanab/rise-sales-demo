@@ -3,6 +3,7 @@
 // Based on their characteristics, pain points, and buying signals
 
 import { calculateROI, getDefaultInputs, calculateRisePricing, formatCurrencyShort } from './roiCalculator';
+import type { CallReportData } from '../types/callReport';
 
 // Rise Analytics Product Catalog with detailed targeting criteria
 export const RISE_PRODUCTS = {
@@ -76,6 +77,7 @@ export interface Lead {
   roa: number;
   score: number;
   status: string;
+  callReport?: CallReportData;
 }
 
 export interface ProductRecommendation {
@@ -127,7 +129,7 @@ export interface SalesDashboardMetrics {
 }
 
 // Analyze product fit for an institution
-function analyzeProductFit(lead: Lead): ProductRecommendation[] {
+export function analyzeProductFit(lead: Lead): ProductRecommendation[] {
   const recommendations: ProductRecommendation[] = [];
   const typeLabel = lead.type === 'Credit Union' ? 'member' : 'customer';
   const typeLabels = lead.type === 'Credit Union' ? 'members' : 'customers';
@@ -457,7 +459,7 @@ function identifyBuyingSignals(lead: Lead, productRecs: ProductRecommendation[])
 
   // Type signal
   if (lead.type === 'Credit Union') {
-    signals.push('CU EXPERTISE: Rise has 150+ credit union clients, deep CU workflow knowledge');
+    signals.push('CU EXPERTISE: Rise has extensive credit union experience with deep CU workflow knowledge');
   }
 
   // Scale signal
@@ -642,7 +644,7 @@ Hi [First Name],
 
 I noticed ${lead.name} has grown to ${formatCurrencyShort(lead.assets)} in assets - congratulations on the success in ${lead.city}.
 
-I'm reaching out because we've helped 150+ ${lead.type === 'Credit Union' ? 'credit unions' : 'community banks'} solve the exact challenges you're likely facing:
+I'm reaching out because we've helped numerous ${lead.type === 'Credit Union' ? 'credit unions' : 'community banks'} solve the exact challenges you're likely facing:
 
 **Why ${topProduct.shortName} for ${lead.name}:**
 ${topProduct.whyTheyNeedIt}
