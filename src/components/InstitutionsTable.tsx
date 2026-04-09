@@ -6,6 +6,7 @@ import { ASSET_SIZE_FILTERS } from '../api/fdicApi';
 import { usePagination } from '../hooks/usePagination';
 import { exportICPMatchesToCSV, type ICPMatch } from '../utils/prospectFinder';
 import SavedFilters from './SavedFilters';
+import { cn } from '../lib/utils';
 
 const ALL_STATUSES = ['new', 'contacted', 'qualified', 'demo_scheduled', 'proposal_sent', 'won', 'lost'];
 
@@ -122,23 +123,26 @@ export default function InstitutionsTable({
   const endIndex = Math.min(page * pageSize, leads.length);
 
   return (
-    <div className="col-span-2 bg-white rounded-xl shadow-sm border">
-      <div className="p-4 border-b">
+    <div className="col-span-2 bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="p-4 border-b bg-gradient-to-r from-white to-gray-50/50">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {icpMatches ? `Prospect Finder Results — ${icpMatches.length} matches` : 'Institutions Pipeline'}
-          </h2>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {icpMatches ? `Prospect Finder Results — ${icpMatches.length} matches` : 'Institutions Pipeline'}
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">Search, filter, and manage your prospect pipeline</p>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => icpMatches ? exportICPMatchesToCSV(icpMatches) : exportLeadsToCsv(leads)}
               disabled={leads.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               title="Export filtered leads to CSV"
             >
               <Download className="w-4 h-4" />
               Export CSV
             </button>
-            <span className="text-sm text-gray-500">{leads.length.toLocaleString()} results</span>
+            <span className="text-sm text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg font-medium">{leads.length.toLocaleString()} results</span>
           </div>
         </div>
 
@@ -218,15 +222,15 @@ export default function InstitutionsTable({
           </div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 border-b sticky top-0">
+            <thead className="bg-gray-50/80 border-b sticky top-0 backdrop-blur-sm z-10">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Institution</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Assets</th>
-                {icpMatches && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Match</th>}
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-10">Actions</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Institution</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Location</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Assets</th>
+                {icpMatches && <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Match</th>}
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Score</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-10">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -234,9 +238,12 @@ export default function InstitutionsTable({
                 <tr
                   key={lead.id}
                   onClick={() => onSelectLead(lead)}
-                  className={`cursor-pointer transition-colors ${
-                    selectedLead?.id === lead.id ? 'bg-blue-50' : 'hover:bg-gray-50'
-                  }`}
+                  className={cn(
+                    'cursor-pointer transition-all duration-150',
+                    selectedLead?.id === lead.id
+                      ? 'bg-blue-50/80 border-l-2 border-l-blue-500'
+                      : 'hover:bg-gray-50/80 border-l-2 border-l-transparent'
+                  )}
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -287,11 +294,13 @@ export default function InstitutionsTable({
                   })()}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className={`text-lg font-bold ${
-                        lead.score >= 85 ? 'text-green-600' : lead.score >= 70 ? 'text-amber-600' : 'text-gray-600'
-                      }`}>
+                      <span className={cn(
+                        'text-lg font-bold px-2 py-0.5 rounded-lg',
+                        lead.score >= 85 ? 'text-green-700 bg-green-50' :
+                        lead.score >= 70 ? 'text-amber-700 bg-amber-50' : 'text-gray-600'
+                      )}>
                         {lead.score}
-                      </div>
+                      </span>
                       {lead.score >= 85 && <Zap className="w-4 h-4 text-amber-500" />}
                     </div>
                   </td>
@@ -356,9 +365,9 @@ export default function InstitutionsTable({
 
       {/* Pagination Controls */}
       {!loading && leads.length > 0 && (
-        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Showing {startIndex}-{endIndex} of {leads.length.toLocaleString()} institutions
+        <div className="p-4 border-t bg-gray-50/50 flex items-center justify-between">
+          <div className="text-sm text-gray-500">
+            Showing <span className="font-medium text-gray-700">{startIndex}-{endIndex}</span> of <span className="font-medium text-gray-700">{leads.length.toLocaleString()}</span> institutions
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">

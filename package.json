@@ -6,15 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "remotion:preview": "remotion preview src/remotion/index.tsx",
+    "remotion:render": "remotion render src/remotion/index.tsx"
   },
   "dependencies": {
+    "@remotion/player": "^4.0.447",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^7.13.0"
+    "react-router-dom": "^7.13.0",
+    "remotion": "^4.0.447",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@remotion/cli": "^4.0.447",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",

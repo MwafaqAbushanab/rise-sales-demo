@@ -4,6 +4,8 @@ import type { Lead } from '../types';
 import { formatCurrency } from '../types';
 import type { HotLead } from '../utils/salesAcceleration';
 import { computeFinancialHealth } from '../utils/financialHealth';
+import { KpiCard } from './ui/KpiCard';
+import { SalesforceIcon, LinkedInIcon, SlackIcon } from './icons';
 
 interface ExecutiveSummaryProps {
   leads: Lead[];
@@ -20,11 +22,9 @@ export default function ExecutiveSummary({ leads, hotLeads }: ExecutiveSummaryPr
   const bankCount = leads.filter(l => l.type === 'Community Bank').length;
   const qualifiedCount = leads.filter(l => l.status === 'qualified' || l.status === 'demo_scheduled' || l.status === 'proposal_sent').length;
 
-  // Calculate market opportunity
   const totalMarketAssets = leads.reduce((sum, l) => sum + l.assets, 0);
   const avgLeadScore = leads.length > 0 ? Math.round(leads.reduce((sum, l) => sum + l.score, 0) / leads.length) : 0;
 
-  // Portfolio health from 5300 data
   const portfolioHealth = useMemo(() => {
     const cusWithData = leads.filter(l => l.callReport?.latestQuarter);
     if (cusWithData.length === 0) return null;
@@ -34,41 +34,6 @@ export default function ExecutiveSummary({ leads, hotLeads }: ExecutiveSummaryPr
     const elevatedCount = healthScores.filter(h => h.riskLevel === 'elevated' || h.riskLevel === 'high').length;
     return { avgHealth, avgDelinquency, elevatedCount, totalWithData: cusWithData.length };
   }, [leads]);
-
-  const kpis = [
-    {
-      label: 'Pipeline Value',
-      value: `$${(totalPipelineValue / 1000000).toFixed(1)}M`,
-      subtext: `${hotLeads.length} active opportunities`,
-      icon: DollarSign,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
-    },
-    {
-      label: 'Avg Deal Size',
-      value: `$${(avgDealSize / 1000).toFixed(0)}K`,
-      subtext: 'Per qualified lead',
-      icon: TrendingUp,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
-    },
-    {
-      label: 'Market Coverage',
-      value: leads.length.toLocaleString(),
-      subtext: `${cuCount} Credit Unions · ${bankCount} Banks`,
-      icon: Globe,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
-    },
-    {
-      label: 'Total Addressable',
-      value: formatCurrency(totalMarketAssets),
-      subtext: 'Combined assets',
-      icon: Landmark,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-100'
-    }
-  ];
 
   return (
     <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
@@ -88,19 +53,43 @@ export default function ExecutiveSummary({ leads, hotLeads }: ExecutiveSummaryPr
         </div>
       </div>
 
+      {/* KPI Cards Row */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        {kpis.map((kpi, i) => (
-          <div key={i} className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className={`w-8 h-8 ${kpi.bgColor} rounded-lg flex items-center justify-center`}>
-                <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
-              </div>
-              <span className="text-xs font-medium text-gray-500 uppercase">{kpi.label}</span>
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{kpi.value}</div>
-            <div className="text-xs text-gray-500">{kpi.subtext}</div>
-          </div>
-        ))}
+        <KpiCard
+          label="Pipeline Value"
+          value={`$${(totalPipelineValue / 1000000).toFixed(1)}M`}
+          caption={`${hotLeads.length} active opportunities`}
+          icon={<DollarSign className="h-4 w-4 text-emerald-600" />}
+          tone="success"
+          trend="up"
+          delta={12}
+        />
+        <KpiCard
+          label="Avg Deal Size"
+          value={`$${(avgDealSize / 1000).toFixed(0)}K`}
+          caption="Per qualified lead"
+          icon={<TrendingUp className="h-4 w-4 text-blue-600" />}
+          tone="primary"
+          trend="up"
+          delta={8}
+        />
+        <KpiCard
+          label="Market Coverage"
+          value={leads.length.toLocaleString()}
+          caption={`${cuCount} Credit Unions · ${bankCount} Banks`}
+          icon={<Globe className="h-4 w-4 text-purple-600" />}
+          tone="default"
+          trend="flat"
+        />
+        <KpiCard
+          label="Total Addressable"
+          value={formatCurrency(totalMarketAssets)}
+          caption="Combined assets"
+          icon={<Landmark className="h-4 w-4 text-amber-600" />}
+          tone="warning"
+          trend="up"
+          delta={5}
+        />
       </div>
 
       {/* Quick Stats Row */}
@@ -154,12 +143,17 @@ export default function ExecutiveSummary({ leads, hotLeads }: ExecutiveSummaryPr
         )}
       </div>
 
-      {/* Data Source Notice */}
+      {/* Data Source & Integrations Footer */}
       <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
         <p className="text-[10px] text-gray-400">
           Institution data: NCUA (credit unions) & FDIC (banks) — live government sources. Scores, deal sizes, and competitive intel are estimates.
         </p>
-        <span className="text-[10px] text-gray-300 whitespace-nowrap ml-4">Rise Analytics Demo</span>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-gray-400 mr-1">Integrations:</span>
+          <SalesforceIcon className="h-4 w-auto opacity-40 hover:opacity-80 transition-opacity" />
+          <LinkedInIcon className="h-3.5 w-auto opacity-40 hover:opacity-80 transition-opacity" />
+          <SlackIcon className="h-3.5 w-auto opacity-40 hover:opacity-80 transition-opacity" />
+        </div>
       </div>
     </div>
   );

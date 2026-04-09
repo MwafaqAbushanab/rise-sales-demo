@@ -1,4 +1,5 @@
 import { BarChart3, RefreshCw, Sparkles } from 'lucide-react';
+import { SalesforceIcon } from '../icons';
 
 export default function AppHeader({ loading, onRefresh }: {
   loading: boolean;
@@ -9,15 +10,19 @@ export default function AppHeader({ loading, onRefresh }: {
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-600/20">
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Rise Sales Agent</h1>
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight">Rise Sales Agent</h1>
               <p className="text-xs text-gray-500">Credit Union Intelligence — Powered by NCUA & FDIC Data</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-400 border border-gray-100 rounded-lg px-2.5 py-1.5">
+              <SalesforceIcon className="h-4 w-auto" />
+              <span>Synced</span>
+            </div>
             <button
               onClick={onRefresh}
               disabled={loading}
@@ -26,7 +31,7 @@ export default function AppHeader({ loading, onRefresh }: {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh Data
             </button>
-            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium flex items-center gap-1">
+            <span className="px-3 py-1.5 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 rounded-lg text-sm font-medium flex items-center gap-1.5 shadow-sm">
               <Sparkles className="w-4 h-4" /> AI Active
             </span>
           </div>

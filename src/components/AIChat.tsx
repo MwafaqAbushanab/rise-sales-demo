@@ -6,7 +6,8 @@ import { getTierEmoji } from '../utils/prospectingIntelligence';
 import type { CompetitiveIntel } from '../utils/competitiveIntelligence';
 import { streamChatMessage, checkAIHealth, getFallbackResponse, type LeadContext } from '../api/aiService';
 import { calculateROI, getDefaultInputs } from '../utils/roiCalculator';
-import { Bot, Send, Loader2, Wifi, WifiOff, Copy, Check } from 'lucide-react';
+import { Bot, Send, Loader2, Wifi, WifiOff, Copy, Check, Sparkles } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -31,12 +32,11 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingMessageRef = useRef('');
 
-  // Check AI backend health on mount
   useEffect(() => {
     checkAIHealth().then(setAiConnected);
     const interval = setInterval(() => {
       checkAIHealth().then(setAiConnected);
-    }, 30000); // Check every 30 seconds
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -60,7 +60,6 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
     }
   }, [selectedLead, intelligence]);
 
-  // Build lead context for AI
   const buildLeadContext = useCallback((): LeadContext | null => {
     if (!selectedLead) return null;
 
@@ -106,7 +105,6 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
-    // Check if AI is connected
     if (!aiConnected) {
       setIsTyping(true);
       setTimeout(() => {
@@ -119,11 +117,8 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
       return;
     }
 
-    // Stream response from AI
     setIsStreaming(true);
     streamingMessageRef.current = '';
-
-    // Add empty assistant message that we'll fill with streaming content
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
     const conversationHistory = messages.slice(-10).map(m => ({
@@ -171,37 +166,49 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  const suggestions = [
+    { label: '📧 Write cold email', prompt: 'Write a compelling personalized cold email to this prospect highlighting how Rise Analytics can solve their specific challenges' },
+    { label: '💰 Calculate ROI', prompt: 'Calculate and explain the ROI this institution would get from Rise Analytics, including specific dollar savings' },
+    { label: '⚔️ Beat competition', prompt: 'Create a competitive battle card for this prospect - how do we beat Jack Henry, Fiserv, and Q2?' },
+    { label: '🎯 Win strategy', prompt: 'What is the best strategy to win this deal? Include timeline, key stakeholders to target, and potential objections' },
+    { label: '📊 Demo script', prompt: 'Prepare a custom demo script tailored to this institution\'s specific needs and pain points' }
+  ];
+
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-lg border border-gray-200">
-      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-xl">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+    <div className="flex flex-col h-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-1 ring-white/20">
             <Bot className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">AI Sales Agent</h3>
-            <p className="text-xs text-blue-100 flex items-center gap-1">
+            <h3 className="font-semibold text-white text-sm">AI Sales Agent</h3>
+            <p className="text-[11px] text-blue-100 flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3" />
               Powered by Claude
-              {aiConnected === true && <Wifi className="w-3 h-3 text-green-300" />}
-              {aiConnected === false && <WifiOff className="w-3 h-3 text-red-300" />}
+              {aiConnected === true && <span className="flex items-center gap-1 text-emerald-300"><Wifi className="w-3 h-3" /> Connected</span>}
+              {aiConnected === false && <span className="flex items-center gap-1 text-red-300"><WifiOff className="w-3 h-3" /> Offline</span>}
             </p>
           </div>
         </div>
         {selectedLead && (
-          <span className="px-2 py-1 bg-white/20 rounded text-xs text-white truncate max-w-[150px]">
+          <span className="px-2.5 py-1 bg-white/15 backdrop-blur-sm rounded-lg text-xs text-white truncate max-w-[150px] ring-1 ring-white/10">
             {selectedLead.name}
           </span>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-gray-50 to-gray-50/50">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+          <div key={i} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+            <div className={cn(
+              'max-w-[85%] rounded-2xl px-4 py-3 transition-all',
               msg.role === 'user'
-                ? 'bg-blue-600 text-white rounded-br-md'
-                : 'bg-white text-gray-800 shadow-sm border rounded-bl-md'
-            }`}>
+                ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-br-md shadow-md shadow-blue-600/10'
+                : 'bg-white text-gray-800 shadow-sm border border-gray-100 rounded-bl-md'
+            )}>
               <div className="text-sm whitespace-pre-wrap leading-relaxed">
                 {msg.content.split('**').map((part, j) =>
                   j % 2 === 1 ? <strong key={j}>{part}</strong> : part
@@ -210,18 +217,15 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
               {msg.role === 'assistant' && msg.content.length > 100 && (
                 <button
                   onClick={() => copyToClipboard(msg.content, i)}
-                  className="mt-2 flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                  className={cn(
+                    'mt-2 flex items-center gap-1 text-xs transition-colors',
+                    copiedIndex === i ? 'text-emerald-500' : 'text-gray-400 hover:text-gray-600'
+                  )}
                 >
                   {copiedIndex === i ? (
-                    <>
-                      <Check className="w-3 h-3" />
-                      Copied!
-                    </>
+                    <><Check className="w-3 h-3" /> Copied!</>
                   ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      Copy
-                    </>
+                    <><Copy className="w-3 h-3" /> Copy</>
                   )}
                 </button>
               )}
@@ -230,11 +234,15 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
         ))}
         {(isTyping || (isStreaming && messages[messages.length - 1]?.content === '')) && (
           <div className="flex justify-start">
-            <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border rounded-bl-md">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+            <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100 rounded-bl-md">
+              <div className="flex items-center gap-1.5">
+                {[0, 1, 2].map(dot => (
+                  <div
+                    key={dot}
+                    className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"
+                    style={{ animationDelay: `${dot * 150}ms`, animationDuration: '0.8s' }}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -242,11 +250,12 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="p-4 border-t bg-white rounded-b-xl">
+      {/* Input Area */}
+      <div className="p-4 border-t bg-white">
         {aiConnected === false && (
-          <div className="mb-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center gap-2">
-            <WifiOff className="w-4 h-4" />
-            AI backend offline. Start server: <code className="bg-amber-100 px-1 rounded">cd server && npm run dev</code>
+          <div className="mb-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 flex items-center gap-2">
+            <WifiOff className="w-4 h-4 flex-shrink-0" />
+            AI backend offline. Start server: <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-[10px]">cd server && npm run dev</code>
           </div>
         )}
         <div className="flex gap-2">
@@ -256,32 +265,31 @@ export default function AIChat({ selectedLead, intelligence, competitiveIntel }:
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && !isStreaming && handleSend()}
             placeholder={aiConnected ? "Ask me anything about this prospect..." : "AI offline - limited responses"}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-300 bg-gray-50 transition-all text-sm placeholder:text-gray-400"
             disabled={isStreaming}
           />
           <button
             onClick={handleSend}
             disabled={isStreaming || !input.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={cn(
+              'px-4 py-2.5 rounded-xl transition-all flex items-center justify-center',
+              input.trim()
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30'
+                : 'bg-gray-100 text-gray-400'
+            )}
           >
             {isStreaming ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </div>
-        <div className="flex gap-2 mt-2 flex-wrap">
-          {[
-            { label: '📧 Write cold email', prompt: 'Write a compelling personalized cold email to this prospect highlighting how Rise Analytics can solve their specific challenges' },
-            { label: '💰 Calculate ROI', prompt: 'Calculate and explain the ROI this institution would get from Rise Analytics, including specific dollar savings' },
-            { label: '⚔️ Beat competition', prompt: 'Create a competitive battle card for this prospect - how do we beat Jack Henry, Fiserv, and Q2?' },
-            { label: '🎯 Win strategy', prompt: 'What is the best strategy to win this deal? Include timeline, key stakeholders to target, and potential objections' },
-            { label: '📊 Demo script', prompt: 'Prepare a custom demo script tailored to this institution\'s specific needs and pain points' }
-          ].map(suggestion => (
+        <div className="flex gap-1.5 mt-2.5 flex-wrap">
+          {suggestions.map(s => (
             <button
-              key={suggestion.label}
-              onClick={() => { setInput(suggestion.prompt); }}
+              key={s.label}
+              onClick={() => setInput(s.prompt)}
               disabled={isStreaming}
-              className="px-3 py-1.5 text-xs bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 rounded-full hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 border border-gray-200 hover:border-blue-200 transition-all disabled:opacity-50 font-medium"
+              className="px-2.5 py-1.5 text-[11px] bg-white text-gray-600 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 border border-gray-200 hover:border-indigo-200 transition-all disabled:opacity-50 font-medium shadow-sm hover:shadow"
             >
-              {suggestion.label}
+              {s.label}
             </button>
           ))}
         </div>
