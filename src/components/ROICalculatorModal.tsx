@@ -38,18 +38,18 @@ export default function ROICalculatorModal({ lead, isOpen, onClose }: ROICalcula
   const risePricing = calculateRisePricing(lead.assets, lead.members);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col ring-1 ring-black/5">
         {/* Header */}
-        <div className="p-6 border-b bg-gradient-to-r from-emerald-600 to-teal-600">
+        <div className="p-6 border-b bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-1 ring-white/20">
                 <Calculator className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">ROI Calculator</h2>
-                <p className="text-emerald-100 text-sm">{lead.name}</p>
+                <p className="text-emerald-100 text-sm">{lead.name} — {lead.city}, {lead.state}</p>
               </div>
             </div>
             <button
