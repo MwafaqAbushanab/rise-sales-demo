@@ -1,10 +1,18 @@
 import { useState } from 'react';
-import { Bot, Linkedin, FileText, Swords, Hash, Globe, Megaphone, Sparkles, Loader2, Copy, Check, Building2, GraduationCap, MessageSquare } from 'lucide-react';
+import { Bot, Linkedin, FileText, Swords, Hash, Globe, Megaphone, Sparkles, Loader2, Copy, Check, Building2, GraduationCap, MessageSquare, Mail, TrendingUp, Rocket } from 'lucide-react';
 import { generateSocialPost, generateBlogOutline, generateBattleCard, generateAISearchContent, RISE_ANALYTICS_PROFILE, SEO_KEYWORDS, type MarketingContent } from '../../utils/marketingAgent';
+import { COPY_FRAMEWORKS, EMAIL_FRAMEWORKS, SOCIAL_HOOK_TYPES, HEADLINE_FORMULAS } from '../../data/marketingFrameworks';
+import { useStreamingGeneration } from '../../hooks/useStreamingGeneration';
+import FrameworkSelector from '../marketing/FrameworkSelector';
+import EmailSequencesTab from '../marketing/EmailSequencesTab';
+import CROExperimentsTab from '../marketing/CROExperimentsTab';
+import LaunchPlannerTab from '../marketing/LaunchPlannerTab';
+
+type TabId = 'aiCreate' | 'social' | 'blog' | 'battle' | 'seo' | 'ai' | 'emailSeq' | 'cro' | 'launch';
 
 // Marketing Agent Dashboard - Generate content and improve AI search visibility
 export default function MarketingAgentDashboard() {
-  const [activeTab, setActiveTab] = useState<'social' | 'blog' | 'battle' | 'seo' | 'ai' | 'aiCreate'>('social');
+  const [activeTab, setActiveTab] = useState<TabId>('aiCreate');
   const [generatedContent, setGeneratedContent] = useState<MarketingContent | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>('company');
   const [selectedPlatform, setSelectedPlatform] = useState<'linkedin' | 'twitter' | 'facebook'>('linkedin');
@@ -18,9 +26,10 @@ export default function MarketingAgentDashboard() {
   const [aiTargetAudience, setAiTargetAudience] = useState<string>('credit_union');
   const [aiProduct, setAiProduct] = useState<string>('');
   const [aiCustomPrompt, setAiCustomPrompt] = useState<string>('');
-  const [aiGeneratedContent, setAiGeneratedContent] = useState<string>('');
-  const [aiIsGenerating, setAiIsGenerating] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [selectedFramework, setSelectedFramework] = useState<string | null>(null);
+  const [selectedHook, setSelectedHook] = useState<string | null>(null);
+  const [selectedHeadline, setSelectedHeadline] = useState<string | null>(null);
+  const aiStream = useStreamingGeneration();
 
   // AI SEO toolkit state
   const [aiSeoSubTab, setAiSeoSubTab] = useState<'query' | 'schema' | 'faq' | 'profile'>('query');
@@ -61,64 +70,17 @@ export default function MarketingAgentDashboard() {
   };
 
   // Generate AI content via backend API with streaming
-  const generateAIContent = async () => {
-    setAiIsGenerating(true);
-    setAiError(null);
-    setAiGeneratedContent('');
-
-    try {
-      const response = await fetch('http://localhost:3002/api/marketing/generate/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contentType: aiContentType,
-          topic: aiTopic || undefined,
-          product: aiProduct || undefined,
-          targetAudience: aiTargetAudience,
-          customPrompt: aiContentType === 'custom' ? aiCustomPrompt : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate content');
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) {
-        throw new Error('No response body');
-      }
-
-      let fullContent = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.content) {
-                fullContent += parsed.content;
-                setAiGeneratedContent(fullContent);
-              }
-            } catch {
-              // Skip non-JSON lines
-            }
-          }
-        }
-      }
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : 'Failed to generate content');
-    } finally {
-      setAiIsGenerating(false);
-    }
+  const generateAIContent = () => {
+    aiStream.generate('/api/marketing/generate/stream', {
+      contentType: aiContentType,
+      topic: aiTopic || undefined,
+      product: aiProduct || undefined,
+      targetAudience: aiTargetAudience,
+      customPrompt: aiContentType === 'custom' ? aiCustomPrompt : undefined,
+      framework: selectedFramework || undefined,
+      socialHook: (aiContentType === 'social_post' && selectedHook) ? selectedHook : undefined,
+      headlineFormula: (['blog_outline', 'seo_content'].includes(aiContentType) && selectedHeadline) ? selectedHeadline : undefined,
+    });
   };
 
   // Generate AI SEO content (Query Answerer, Schema, FAQ)
@@ -276,6 +238,9 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
     { id: 'battle', label: 'Battle Cards', icon: Swords },
     { id: 'seo', label: 'SEO Keywords', icon: Hash },
     { id: 'ai', label: 'AI Search', icon: Globe },
+    { id: 'emailSeq', label: 'Email Sequences', icon: Mail },
+    { id: 'cro', label: 'CRO Experiments', icon: TrendingUp },
+    { id: 'launch', label: 'Launch Planner', icon: Rocket },
   ];
 
   return (
@@ -292,28 +257,28 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
           </div>
           <div className="flex items-center gap-4 text-sm">
             <div className="text-center">
-              <div className="font-bold text-lg">{SEO_KEYWORDS.primary.length + SEO_KEYWORDS.secondary.length}</div>
-              <div className="text-purple-200">Target Keywords</div>
+              <div className="font-bold text-lg">9</div>
+              <div className="text-purple-200">Tools</div>
             </div>
             <div className="text-center">
-              <div className="font-bold text-lg">6</div>
-              <div className="text-purple-200">Products</div>
+              <div className="font-bold text-lg">8</div>
+              <div className="text-purple-200">Frameworks</div>
             </div>
             <div className="text-center">
-              <div className="font-bold text-lg">4</div>
-              <div className="text-purple-200">Battle Cards</div>
+              <div className="font-bold text-lg">17</div>
+              <div className="text-purple-200">CRO Tests</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b flex">
+      <div className="border-b flex overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => { setActiveTab(tab.id as typeof activeTab); setGeneratedContent(null); }}
-            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
               activeTab === tab.id
                 ? 'border-purple-600 text-purple-600 bg-purple-50'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -356,6 +321,7 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
                   <option value="case_study">Case Study Outline</option>
                   <option value="battle_card">Competitive Battle Card</option>
                   <option value="seo_content">SEO-Optimized Content</option>
+                  <option value="cold_email">Cold Email (Single)</option>
                   <option value="custom">Custom Prompt</option>
                 </select>
               </div>
@@ -407,6 +373,59 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
               </div>
             </div>
 
+            {/* Framework Selector - shown for relevant content types */}
+            {['social_post', 'email_campaign', 'blog_outline', 'battle_card', 'seo_content', 'cold_email'].includes(aiContentType) && (
+              <FrameworkSelector
+                frameworks={aiContentType === 'email_campaign' || aiContentType === 'cold_email' ? EMAIL_FRAMEWORKS : COPY_FRAMEWORKS}
+                selected={selectedFramework}
+                onSelect={setSelectedFramework}
+              />
+            )}
+
+            {/* Social Hook selector - for social posts */}
+            {aiContentType === 'social_post' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Social Hook Style</label>
+                <select
+                  value={selectedHook ?? ''}
+                  onChange={(e) => setSelectedHook(e.target.value || null)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                >
+                  <option value="">Auto (AI chooses)</option>
+                  {SOCIAL_HOOK_TYPES.map(hook => (
+                    <option key={hook.id} value={hook.id}>{hook.name} — {hook.formula}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Headline Formula - for blog/SEO */}
+            {['blog_outline', 'seo_content'].includes(aiContentType) && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Headline Formula</label>
+                <div className="flex flex-wrap gap-2">
+                  {HEADLINE_FORMULAS.map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => setSelectedHeadline(selectedHeadline === f.id ? null : f.id)}
+                      className={`px-2 py-1 text-xs rounded-lg border transition-colors ${
+                        selectedHeadline === f.id
+                          ? 'bg-purple-100 border-purple-300 text-purple-700'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+                {selectedHeadline && (
+                  <p className="mt-1 text-xs text-purple-600">
+                    Pattern: {HEADLINE_FORMULAS.find(f => f.id === selectedHeadline)?.pattern}
+                  </p>
+                )}
+              </div>
+            )}
+
             {aiContentType === 'custom' && (
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Custom Prompt</label>
@@ -422,10 +441,10 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
 
             <button
               onClick={generateAIContent}
-              disabled={aiIsGenerating || (aiContentType === 'custom' && !aiCustomPrompt)}
+              disabled={aiStream.isGenerating || (aiContentType === 'custom' && !aiCustomPrompt)}
               className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {aiIsGenerating ? (
+              {aiStream.isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Generating...
@@ -438,22 +457,23 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
               )}
             </button>
 
-            {aiError && (
+            {aiStream.error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
-                {aiError}
+                {aiStream.error}
               </div>
             )}
 
-            {aiGeneratedContent && (
+            {aiStream.content && (
               <div className="bg-gray-50 rounded-lg p-4 border">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-gray-700">
                     Generated {aiContentType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {selectedFramework && ` (${COPY_FRAMEWORKS.find(f => f.id === selectedFramework)?.name ?? selectedFramework})`}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">{aiGeneratedContent.split(/\s+/).length} words</span>
+                    <span className="text-xs text-gray-500">{aiStream.wordCount} words</span>
                     <button
-                      onClick={() => copyToClipboard(aiGeneratedContent)}
+                      onClick={() => copyToClipboard(aiStream.content)}
                       className="px-3 py-1 bg-white border rounded-lg text-sm hover:bg-gray-100 flex items-center gap-1"
                     >
                       {copiedContent ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
@@ -461,7 +481,7 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
                     </button>
                   </div>
                 </div>
-                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans max-h-96 overflow-y-auto">{aiGeneratedContent}</pre>
+                <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans max-h-96 overflow-y-auto">{aiStream.content}</pre>
               </div>
             )}
           </div>
@@ -915,6 +935,10 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
             )}
           </div>
         )}
+
+        {activeTab === 'emailSeq' && <EmailSequencesTab />}
+        {activeTab === 'cro' && <CROExperimentsTab />}
+        {activeTab === 'launch' && <LaunchPlannerTab />}
       </div>
     </div>
   );

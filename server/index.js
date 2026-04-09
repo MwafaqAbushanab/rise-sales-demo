@@ -436,6 +436,8 @@ Format as:
 // MARKETING AGENT ENDPOINTS
 // =====================================================
 
+import { buildFrameworkPrompt, buildSocialHookPrompt, buildHeadlinePrompt } from './marketingSkillsData.js';
+
 const MARKETING_AGENT_SYSTEM_PROMPT = `You are an expert marketing content creator for Rise Analytics, the leading data analytics and business intelligence platform built for credit unions. We also serve community banks.
 
 ## Your Role
@@ -462,6 +464,29 @@ Secondary: credit union dashboard, member analytics, loan portfolio analytics, C
 - vs Tableau/Power BI: Purpose-built for FIs, pre-built compliance reports, no data modeling
 - vs Q2/Alkami: Analytics-first vs digital banking, complementary
 
+## Writing Frameworks Available
+When a framework is specified, follow its exact structure:
+- PAS (Problem, Agitate, Solution) — for problem-aware prospects
+- BAB (Before, After, Bridge) — for transformation-driven offers
+- AIDA (Attention, Interest, Desire, Action) — for data-driven pitches
+- QVC (Question, Value, CTA) — for C-suite brevity
+- PPP (Praise, Picture, Push) — for relationship-building
+- Star-Story-Solution — for customer success narratives
+- SCQ (Situation, Complication, Question) — for discovery conversations
+- 4Ps (Promise, Picture, Proof, Push) — for landing pages
+
+## Psychology Principles to Apply
+- Jobs to Be Done: Frame features as jobs completed
+- Loss Aversion: Frame as what they lose without you
+- Social Proof: Use peer institution examples
+- Anchoring: Lead with the big number
+- Reciprocity: Give value before asking
+
+## Email Subject Line Best Practices
+- 2-4 words maximum, lowercase, no punctuation
+- Internal camouflage — look like a colleague, not a marketer
+- Reference something specific about the prospect
+
 ## Content Guidelines
 1. Always use specific data and metrics
 2. Speak to credit union pain points: manual reporting, data silos, member attrition, NCUA compliance, competing with big banks
@@ -469,7 +494,9 @@ Secondary: credit union dashboard, member analytics, loan portfolio analytics, C
 4. Include clear calls to action
 5. Optimize for SEO with natural keyword integration around credit union analytics
 6. Make content shareable and engaging
-7. Reference credit union-specific trends: consolidation, digital transformation, Gen Z member acquisition, embedded analytics`;
+7. Reference credit union-specific trends: consolidation, digital transformation, Gen Z member acquisition, embedded analytics
+8. One CTA per piece of content — never compete with yourself
+9. Write at 8th grade reading level with short paragraphs`;
 
 // Generate marketing content with AI
 app.post('/api/marketing/generate', async (req, res) => {
@@ -595,13 +622,25 @@ Format: Full SEO content piece with all elements marked.`;
 // Stream marketing content generation
 app.post('/api/marketing/generate/stream', async (req, res) => {
   try {
-    const { contentType, topic, product, targetAudience, customPrompt } = req.body;
+    const { contentType, topic, product, targetAudience, customPrompt, framework, socialHook, headlineFormula } = req.body;
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const prompt = customPrompt || `Generate ${contentType || 'marketing'} content about ${topic || 'Rise Analytics'} for ${targetAudience || 'credit unions'}${product ? `, focusing on ${product}` : ''}.`;
+    // Build the prompt with optional framework injection
+    let prompt = customPrompt || `Generate ${contentType || 'marketing'} content about ${topic || 'Rise Analytics'} for ${targetAudience || 'credit unions'}${product ? `, focusing on ${product}` : ''}.`;
+
+    // Inject framework instructions if specified
+    if (framework) {
+      prompt += '\n\n' + buildFrameworkPrompt(framework, contentType);
+    }
+    if (socialHook) {
+      prompt += '\n\n' + buildSocialHookPrompt(socialHook);
+    }
+    if (headlineFormula) {
+      prompt += '\n\n' + buildHeadlinePrompt(headlineFormula);
+    }
 
     await aiStream(MARKETING_AGENT_SYSTEM_PROMPT, prompt, res, { maxTokens: 4096 });
     res.end();
