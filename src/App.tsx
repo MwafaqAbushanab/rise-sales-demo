@@ -373,7 +373,7 @@ export default function App() {
 
           <Route path="/marketing" element={
             <ErrorBoundary fallbackTitle="Marketing Agent failed to load">
-              <MarketingAgentDashboard />
+              <MarketingAgentDashboard leads={filteredLeads} />
             </ErrorBoundary>
           } />
         </Routes>

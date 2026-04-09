@@ -1,11 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { initCallReportData, getCallReportForCU, getAllCallReportData, getCallReportMeta, refreshCallReportData } from './callReportService.js';
 import { initContactService, getContactsForInstitution, searchContacts, enrichInstitutionContacts, getContactsStats } from './apolloContactService.js';
+import { getCompositions, renderVideo, cleanupOldVideos } from './videoRenderer.js';
 
 dotenv.config();
 
@@ -1261,6 +1262,78 @@ app.post('/api/contacts/enrich/:institutionId', async (req, res) => {
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), ai: 'groq', model: GROQ_MODEL });
+});
+
+// ── Video Studio API ───────────────────────────────────────────────
+
+const VIDEOS_DIR = join(__dirname, 'data', 'videos');
+
+// List available video compositions
+app.get('/api/video/compositions', (_req, res) => {
+  res.json(getCompositions());
+});
+
+// Render a video (SSE progress stream)
+app.post('/api/video/render', (req, res) => {
+  const { compositionId, inputProps, resolution = '1080p', format = 'mp4' } = req.body;
+
+  if (!compositionId || !inputProps) {
+    return res.status(400).json({ error: 'compositionId and inputProps are required' });
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+
+  let closed = false;
+  req.on('close', () => { closed = true; });
+
+  const sendEvent = (data) => {
+    if (!closed) res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  renderVideo(compositionId, inputProps, {
+    resolution,
+    format,
+    onProgress: (progress) => sendEvent({ progress }),
+  })
+    .then(({ url, filename }) => {
+      sendEvent({ done: true, url, filename });
+      res.end();
+    })
+    .catch((err) => {
+      const status = err.message.includes('queue is full') ? 'queue_full' : 'error';
+      sendEvent({ error: err.message, status });
+      res.end();
+    });
+});
+
+// Download a rendered video
+app.get('/api/video/download/:filename', (req, res) => {
+  const filePath = join(VIDEOS_DIR, req.params.filename);
+  if (!existsSync(filePath)) {
+    return res.status(404).json({ error: 'Video not found' });
+  }
+  const isGif = req.params.filename.endsWith('.gif');
+  res.setHeader('Content-Type', isGif ? 'image/gif' : 'video/mp4');
+  res.setHeader('Content-Disposition', `attachment; filename="${req.params.filename}"`);
+  res.sendFile(filePath);
+});
+
+// Delete a rendered video
+app.delete('/api/video/download/:filename', (req, res) => {
+  const filePath = join(VIDEOS_DIR, req.params.filename);
+  if (!existsSync(filePath)) {
+    return res.status(404).json({ error: 'Video not found' });
+  }
+  try {
+    unlinkSync(filePath);
+    res.json({ deleted: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {

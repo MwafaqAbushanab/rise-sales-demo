@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Users, Landmark, Zap, Mail, GripVertical } from 'lucide-react';
 import type { Lead } from '../types';
-import { formatCurrency, statusColors, formatStatus, PIPELINE_STAGES } from '../types';
+import { formatCurrency, formatStatus, PIPELINE_STAGES } from '../types';
 import { cn } from '../lib/utils';
 
 const COLUMN_ACCENTS: Record<string, { bar: string; dropBg: string; badge: string }> = {

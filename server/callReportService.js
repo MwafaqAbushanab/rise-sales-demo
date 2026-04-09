@@ -13,11 +13,16 @@ const DATA_DIR = join(__dirname, 'data');
 const CACHE_FILE = join(DATA_DIR, 'call-report-cache.json');
 const SEED_FILE = join(DATA_DIR, 'call-report-seed.json');
 
-// Account codes we extract from the 5300 CSV
+// Account codes from NCUA 5300 Call Reports:
+// FS220: 010 (Total Assets), 013 (Total Shares), 025B (Total Loans), 041B (Delinquent),
+//        083 (Current Members), 084 (Potential Members), 550 (Charge-offs), 551 (Recoveries),
+//        719 (Allowance), 860C (Total Borrowings)
+// FS220A: 115 (Total Interest Income), 370 (Used Vehicle), 385 (New Vehicle),
+//         396 (CC Loans), 397 (Other Unsecured)
 const NEEDED_ACCOUNTS = new Set([
   '010', '013', '025B', '041B', '083', '084',
   '115', '370', '385', '396', '397', '550', '551',
-  '657A', '703', '719', '998'
+  '719', '860C'
 ]);
 
 // In-memory call report data store
@@ -87,29 +92,22 @@ export function getCallReportMeta() {
 // ── Quarter Date Helpers ─────────────────────────────────────────────────
 
 function getLatestQuarterDates() {
-  // NCUA publishes quarterly: March, June, September, December
-  // Data typically available ~2 months after quarter end
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth() + 1; // 1-12
+  const month = now.getMonth() + 1;
 
-  // Determine latest available quarter (with ~2 month lag)
   let latestYear, latestMonth, prevYear, prevMonth;
 
   if (month >= 12) {
-    // Dec+: September data available
     latestYear = year; latestMonth = 9;
     prevYear = year; prevMonth = 6;
   } else if (month >= 9) {
-    // Sep-Nov: June data available
     latestYear = year; latestMonth = 6;
     prevYear = year; prevMonth = 3;
   } else if (month >= 6) {
-    // Jun-Aug: March data available
     latestYear = year; latestMonth = 3;
     prevYear = year - 1; prevMonth = 12;
   } else {
-    // Jan-May: December data available
     latestYear = year - 1; latestMonth = 12;
     prevYear = year - 1; prevMonth = 9;
   }
@@ -123,7 +121,6 @@ function getLatestQuarterDates() {
 }
 
 function getQuarterEndDay(month) {
-  // Quarter end dates
   if (month === 3) return '31';
   if (month === 6) return '30';
   if (month === 9) return '30';
@@ -134,93 +131,143 @@ function getQuarterEndDay(month) {
 // ── CSV Download & Parse ─────────────────────────────────────────────────
 
 async function downloadAndParseCallReport(yearMonth) {
-  // yearMonth format: "202409"
-  const url = `https://ncua.gov/files/publications/analysis/call-report-data-${yearMonth}.zip`;
-  console.log(`Call Report: downloading ${url}...`);
+  // Try both URL formats: YYYYMM and YYYY-MM
+  const urls = [
+    `https://ncua.gov/files/publications/analysis/call-report-data-${yearMonth}.zip`,
+    `https://ncua.gov/files/publications/analysis/call-report-data-${yearMonth.slice(0,4)}-${yearMonth.slice(4)}.zip`,
+  ];
 
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.log(`Call Report: download failed (${response.status}) for ${yearMonth}`);
-      return null;
+  for (const url of urls) {
+    console.log(`Call Report: trying ${url}...`);
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(120000) });
+      if (!response.ok) {
+        console.log(`Call Report: HTTP ${response.status} — trying next`);
+        continue;
+      }
+
+      const buffer = await response.arrayBuffer();
+      const { default: AdmZip } = await import('adm-zip');
+      const zip = new AdmZip(Buffer.from(buffer));
+      const entries = zip.getEntries();
+
+      // Find FS220 main file (not FS220A etc.)
+      const fs220Entry = entries.find(e =>
+        e.entryName.toUpperCase() === 'FS220.TXT'
+      );
+
+      if (!fs220Entry) {
+        console.log('Call Report: FS220.txt not found in ZIP');
+        continue;
+      }
+
+      // Parse FS220.txt and FS220A.txt, merge accounts
+      const filesToParse = [
+        { entry: fs220Entry, label: 'FS220.txt' },
+        { entry: entries.find(e => e.entryName.toUpperCase() === 'FS220A.TXT'), label: 'FS220A.txt' },
+      ].filter(f => f.entry);
+
+      let mergedRecords = null;
+      let format = 'long';
+
+      for (const { entry, label } of filesToParse) {
+        console.log(`Call Report: parsing ${label}...`);
+        const csvContent = entry.getData().toString('utf-8');
+        const parsed = parseFS220CSV(csvContent);
+        if (!parsed) continue;
+
+        format = parsed.format;
+        if (!mergedRecords) {
+          mergedRecords = parsed.records;
+        } else {
+          for (const [cuNum, accts] of parsed.records.entries()) {
+            if (mergedRecords.has(cuNum)) {
+              Object.assign(mergedRecords.get(cuNum), accts);
+            } else {
+              mergedRecords.set(cuNum, accts);
+            }
+          }
+        }
+      }
+
+      if (mergedRecords && mergedRecords.size > 0) {
+        console.log(`Call Report: parsed ${mergedRecords.size} CUs (format: ${format})`);
+        return { records: mergedRecords, format };
+      }
+    } catch (err) {
+      console.log(`Call Report: error: ${err.message}`);
     }
-
-    const buffer = await response.arrayBuffer();
-    const { default: AdmZip } = await import('adm-zip');
-    const zip = new AdmZip(Buffer.from(buffer));
-    const entries = zip.getEntries();
-
-    // Find the FS220 main financial data file
-    const fs220Entry = entries.find(e =>
-      e.entryName.toLowerCase().includes('fs220') &&
-      !e.entryName.toLowerCase().includes('fs220a') &&
-      e.entryName.toLowerCase().endsWith('.txt')
-    ) || entries.find(e =>
-      e.entryName.toLowerCase().includes('fs220') &&
-      (e.entryName.toLowerCase().endsWith('.txt') || e.entryName.toLowerCase().endsWith('.csv'))
-    );
-
-    if (!fs220Entry) {
-      console.log('Call Report: FS220 file not found in ZIP. Entries:', entries.map(e => e.entryName));
-      return null;
-    }
-
-    console.log(`Call Report: parsing ${fs220Entry.entryName}...`);
-    const csvContent = fs220Entry.getData().toString('utf-8');
-
-    return parseFS220CSV(csvContent);
-  } catch (err) {
-    console.log(`Call Report: error downloading/parsing: ${err.message}`);
-    return null;
   }
+
+  return null;
 }
 
+// Handles BOTH formats:
+//   Old (long): CU_NUMBER, CYCLE_DATE, ACCT_CODE, ACCT_VALUE (one row per account)
+//   New (wide): CU_NUMBER, CYCLE_DATE, ..., ACCT_010, ACCT_013, ... (one row per CU)
 function parseFS220CSV(csvContent) {
-  // FS220 CSV: CU_NUMBER, CYCLE_DATE, ACCT_CODE, ACCT_VALUE (and other fields)
-  // We only need rows where ACCT_CODE is in our needed set
   const lines = csvContent.split('\n');
   if (lines.length < 2) return null;
 
-  // Parse header to find column indices
   const header = parseCSVLine(lines[0]);
-  const cuNumIdx = header.findIndex(h => h.toUpperCase().includes('CU_NUMBER') || h.toUpperCase() === 'CU_NUMBER');
+  const cuNumIdx = header.findIndex(h => h.toUpperCase() === 'CU_NUMBER');
+
+  if (cuNumIdx === -1) return null;
+
+  // Detect format: wide format has ACCT_XXX columns in the header
+  const acctColumns = new Map();
+  for (let i = 0; i < header.length; i++) {
+    const match = header[i].toUpperCase().match(/^ACCT_(.+)$/);
+    if (match && NEEDED_ACCOUNTS.has(match[1])) {
+      acctColumns.set(i, match[1]);
+    }
+  }
+
+  if (acctColumns.size > 0) {
+    // Wide format
+    const records = new Map();
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const fields = parseCSVLine(line);
+      const cuNumber = parseInt(fields[cuNumIdx]);
+      if (isNaN(cuNumber)) continue;
+
+      const accts = {};
+      for (const [colIdx, code] of acctColumns) {
+        const value = parseFloat(fields[colIdx]) || 0;
+        if (value !== 0) accts[code] = value;
+      }
+      if (Object.keys(accts).length > 0) {
+        records.set(cuNumber, accts);
+      }
+    }
+    return { records, format: 'wide' };
+  }
+
+  // Old long format
   const acctIdx = header.findIndex(h => h.toUpperCase().includes('ACCT') && !h.toUpperCase().includes('VALUE'));
   const valueIdx = header.findIndex(h => h.toUpperCase().includes('VALUE') || h.toUpperCase().includes('ACCT_VALUE'));
 
-  if (cuNumIdx === -1 || valueIdx === -1) {
-    console.log('Call Report: could not find required columns. Headers:', header);
-    return null;
-  }
+  if (acctIdx === -1 || valueIdx === -1) return null;
 
-  // Parse rows into a map: cuNumber -> { acctCode -> value }
-  const result = new Map();
-
+  const records = new Map();
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-
     const fields = parseCSVLine(line);
     const acctCode = (fields[acctIdx] || '').replace(/^Acct_/i, '').trim();
-
     if (!NEEDED_ACCOUNTS.has(acctCode)) continue;
-
     const cuNumber = parseInt(fields[cuNumIdx]);
     const value = parseFloat(fields[valueIdx]) || 0;
-
     if (isNaN(cuNumber)) continue;
-
-    if (!result.has(cuNumber)) {
-      result.set(cuNumber, {});
-    }
-    result.get(cuNumber)[acctCode] = value;
+    if (!records.has(cuNumber)) records.set(cuNumber, {});
+    records.get(cuNumber)[acctCode] = value;
   }
-
-  console.log(`Call Report: parsed data for ${result.size} credit unions`);
-  return result;
+  return { records, format: 'long' };
 }
 
 function parseCSVLine(line) {
-  // Simple CSV parser that handles quoted fields
   const result = [];
   let current = '';
   let inQuotes = false;
@@ -241,26 +288,33 @@ function parseCSVLine(line) {
 }
 
 // ── Build CallReportData from raw account values ─────────────────────────
+// multiplier: 1000 for old long format (values in thousands), 1 for wide format (full dollars)
 
-function buildCallReportQuarter(cuNumber, accts, cycleDate) {
-  const totalAssets = (accts['010'] || 0) * 1000;  // Data in thousands
-  const totalShares = (accts['013'] || 0) * 1000;
-  const totalLoans = (accts['025B'] || 0) * 1000;
-  const totalDelinquent = (accts['041B'] || 0) * 1000;
-  const chargeOffs = (accts['550'] || 0) * 1000;
-  const recoveries = (accts['551'] || 0) * 1000;
+function buildCallReportQuarter(cuNumber, accts, cycleDate, multiplier = 1) {
+  const totalAssets = (accts['010'] || 0) * multiplier;
+  const totalShares = (accts['013'] || 0) * multiplier;
+  const totalLoans = (accts['025B'] || 0) * multiplier;
+  const totalDelinquent = (accts['041B'] || 0) * multiplier;
+  const chargeOffs = (accts['550'] || 0) * multiplier;
+  const recoveries = (accts['551'] || 0) * multiplier;
   const netChargeOffs = chargeOffs - recoveries;
-  const allowance = (accts['719'] || 0) * 1000;
-  const netWorthRatio = accts['998'] || 0;
+  const allowance = (accts['719'] || 0) * multiplier;
+  // Net worth: derive from balance sheet (Assets - Shares - Borrowings)
+  const totalBorrowings = (accts['860C'] || 0) * multiplier;
+  const estimatedNetWorth = totalAssets - totalShares - totalBorrowings;
+  const netWorthRatio = totalAssets > 0 ? (estimatedNetWorth / totalAssets) * 100 : 0;
   const currentMembers = accts['083'] || 0;
   const potentialMembers = accts['084'] || 0;
-  const reLoans = (accts['385'] || 0) * 1000;
-  const autoLoans = (accts['370'] || 0) * 1000;
-  const cardLoans = (accts['703'] || 0) * 1000;
-  const consumerLoans = (accts['396'] || 0) * 1000;
-  const commercialLoans = (accts['397'] || 0) * 1000;
-  const opex = (accts['657A'] || 0) * 1000;
-  const revenue = (accts['115'] || 0) * 1000;
+  // Loan breakdown per NCUA AcctDesc:
+  const autoLoans = ((accts['370'] || 0) + (accts['385'] || 0)) * multiplier; // Used + New Vehicle
+  const cardLoans = (accts['396'] || 0) * multiplier;     // Unsecured Credit Card
+  const consumerLoans = (accts['397'] || 0) * multiplier; // Other Unsecured
+  // RE loans: derive from total minus known categories (703 is empty in 2025+ data)
+  const knownLoans = autoLoans + cardLoans + consumerLoans;
+  const reLoans = Math.max(0, totalLoans - knownLoans);
+  const commercialLoans = 0;
+  const revenue = (accts['115'] || 0) * multiplier;       // Total Interest Income
+  const opex = 0; // Not available as a single account in 5300 data
 
   const delinquencyRatio = totalLoans > 0 ? totalDelinquent / totalLoans : 0;
   const netChargeOffRatio = totalLoans > 0 ? netChargeOffs / totalLoans : 0;
@@ -268,7 +322,6 @@ function buildCallReportQuarter(cuNumber, accts, cycleDate) {
   const memberPenetration = potentialMembers > 0 ? currentMembers / potentialMembers : 0;
   const efficiencyRatio = revenue > 0 ? (opex / revenue) * 100 : 0;
 
-  // Loan composition percentages
   const loanTotal = reLoans + autoLoans + cardLoans + consumerLoans + commercialLoans;
   const loanComposition = {
     realEstate: loanTotal > 0 ? Math.round((reLoans / loanTotal) * 1000) / 10 : 0,
@@ -312,7 +365,7 @@ function computeTrends(latest, previous) {
   if (!previous) return null;
 
   const bpChange = (currentRatio, prevRatio) =>
-    Math.round((currentRatio - prevRatio) * 10000); // basis points
+    Math.round((currentRatio - prevRatio) * 10000);
 
   const pctChange = (current, prev) =>
     prev > 0 ? Math.round(((current - prev) / prev) * 1000) / 10 : 0;
@@ -320,8 +373,8 @@ function computeTrends(latest, previous) {
   return {
     delinquencyChange: bpChange(latest.delinquencyRatio, previous.delinquencyRatio),
     netChargeOffChange: bpChange(latest.netChargeOffRatio, previous.netChargeOffRatio),
-    netWorthRatioChange: Math.round((latest.netWorthRatio - previous.netWorthRatio) * 100), // in basis points of %
-    efficiencyChange: Math.round((latest.efficiencyRatio - previous.efficiencyRatio) * 10), // in basis points (tenths of %)
+    netWorthRatioChange: Math.round((latest.netWorthRatio - previous.netWorthRatio) * 100),
+    efficiencyChange: Math.round((latest.efficiencyRatio - previous.efficiencyRatio) * 10),
     memberGrowthRate: pctChange(latest.currentMembers, previous.currentMembers),
     assetGrowthRate: pctChange(latest.totalAssets, previous.totalAssets),
     loanGrowthRate: pctChange(latest.totalLoans, previous.totalLoans),
@@ -335,16 +388,20 @@ export async function refreshCallReportData() {
   const dates = getLatestQuarterDates();
   console.log(`Call Report: refreshing data for quarters ${dates.latest} and ${dates.previous}`);
 
-  const [latestData, previousData] = await Promise.all([
+  const [latestResult, previousResult] = await Promise.all([
     downloadAndParseCallReport(dates.latest),
     downloadAndParseCallReport(dates.previous),
   ]);
 
-  if (!latestData) {
+  if (!latestResult) {
     throw new Error(`Failed to download call report data for ${dates.latest}`);
   }
 
-  // Build CallReportData for each CU that has data
+  const latestData = latestResult.records;
+  const latestMultiplier = latestResult.format === 'wide' ? 1 : 1000;
+  const previousData = previousResult ? previousResult.records : null;
+  const prevMultiplier = previousResult ? (previousResult.format === 'wide' ? 1 : 1000) : 1000;
+
   const store = { meta: {}, data: {} };
   store.meta = {
     latestCycleDate: dates.latestDate,
@@ -355,14 +412,14 @@ export async function refreshCallReportData() {
   };
 
   for (const [cuNumber, latestAccts] of latestData.entries()) {
-    const latestQ = buildCallReportQuarter(cuNumber, latestAccts, dates.latestDate);
+    const latestQ = buildCallReportQuarter(cuNumber, latestAccts, dates.latestDate, latestMultiplier);
     const prevAccts = previousData ? previousData.get(cuNumber) : null;
-    const prevQ = prevAccts ? buildCallReportQuarter(cuNumber, prevAccts, dates.previousDate) : null;
+    const prevQ = prevAccts ? buildCallReportQuarter(cuNumber, prevAccts, dates.previousDate, prevMultiplier) : null;
     const trends = prevQ ? computeTrends(latestQ, prevQ) : null;
 
     store.data[String(cuNumber)] = {
       cuNumber,
-      cuName: '', // Name not in FS220, will be enriched from NCUA main data
+      cuName: '',
       latestQuarter: latestQ,
       previousQuarter: prevQ,
       trends,

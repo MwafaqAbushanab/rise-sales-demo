@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Bot, Linkedin, FileText, Swords, Hash, Globe, Megaphone, Sparkles, Loader2, Copy, Check, Building2, GraduationCap, MessageSquare, Mail, TrendingUp, Rocket } from 'lucide-react';
+import { useState, lazy, Suspense } from 'react';
+import { Bot, Linkedin, FileText, Swords, Hash, Globe, Megaphone, Sparkles, Loader2, Copy, Check, Building2, GraduationCap, MessageSquare, Mail, TrendingUp, Rocket, Video } from 'lucide-react';
 import { generateSocialPost, generateBlogOutline, generateBattleCard, generateAISearchContent, RISE_ANALYTICS_PROFILE, SEO_KEYWORDS, type MarketingContent } from '../../utils/marketingAgent';
 import { COPY_FRAMEWORKS, EMAIL_FRAMEWORKS, SOCIAL_HOOK_TYPES, HEADLINE_FORMULAS } from '../../data/marketingFrameworks';
 import { useStreamingGeneration } from '../../hooks/useStreamingGeneration';
@@ -7,11 +7,18 @@ import FrameworkSelector from '../marketing/FrameworkSelector';
 import EmailSequencesTab from '../marketing/EmailSequencesTab';
 import CROExperimentsTab from '../marketing/CROExperimentsTab';
 import LaunchPlannerTab from '../marketing/LaunchPlannerTab';
+import type { Lead } from '../../types/index';
 
-type TabId = 'aiCreate' | 'social' | 'blog' | 'battle' | 'seo' | 'ai' | 'emailSeq' | 'cro' | 'launch';
+const VideoStudioTab = lazy(() => import('../marketing/VideoStudioTab'));
+
+type TabId = 'aiCreate' | 'social' | 'blog' | 'battle' | 'seo' | 'ai' | 'emailSeq' | 'cro' | 'launch' | 'video';
+
+interface MarketingAgentProps {
+  leads?: Lead[];
+}
 
 // Marketing Agent Dashboard - Generate content and improve AI search visibility
-export default function MarketingAgentDashboard() {
+export default function MarketingAgentDashboard({ leads = [] }: MarketingAgentProps) {
   const [activeTab, setActiveTab] = useState<TabId>('aiCreate');
   const [generatedContent, setGeneratedContent] = useState<MarketingContent | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>('company');
@@ -241,6 +248,7 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
     { id: 'emailSeq', label: 'Email Sequences', icon: Mail },
     { id: 'cro', label: 'CRO Experiments', icon: TrendingUp },
     { id: 'launch', label: 'Launch Planner', icon: Rocket },
+    { id: 'video', label: 'Video Studio', icon: Video },
   ];
 
   return (
@@ -257,7 +265,7 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
           </div>
           <div className="flex items-center gap-4 text-sm">
             <div className="text-center">
-              <div className="font-bold text-lg">9</div>
+              <div className="font-bold text-lg">10</div>
               <div className="text-purple-200">Tools</div>
             </div>
             <div className="text-center">
@@ -939,6 +947,11 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
         {activeTab === 'emailSeq' && <EmailSequencesTab />}
         {activeTab === 'cro' && <CROExperimentsTab />}
         {activeTab === 'launch' && <LaunchPlannerTab />}
+        {activeTab === 'video' && (
+          <Suspense fallback={<div className="p-8 text-center text-gray-400"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading Video Studio...</div>}>
+            <VideoStudioTab leads={leads} />
+          </Suspense>
+        )}
       </div>
     </div>
   );
