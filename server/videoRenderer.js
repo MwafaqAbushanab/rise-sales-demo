@@ -11,6 +11,7 @@ const VIDEOS_DIR = join(__dirname, 'data', 'videos');
 const ENTRY_POINT = join(__dirname, '..', 'src', 'remotion', 'index.tsx');
 const MAX_CONCURRENT = 1;
 const MAX_QUEUED = 3;
+const RENDER_TIMEOUT_MS = 120_000; // 2 minutes
 const CLEANUP_AGE_MS = 60 * 60 * 1000; // 1 hour
 
 if (!existsSync(VIDEOS_DIR)) {
@@ -55,6 +56,24 @@ const COMPOSITIONS = [
     requiredProps: ['institutionName', 'type', 'city', 'state', 'assets', 'members', 'deposits', 'roa', 'score'],
     optionalProps: ['healthScore', 'riskLevel'],
     defaultDuration: 15,
+    supportedResolutions: ['1080p', 'square', 'story'],
+  },
+  {
+    id: 'FinancialSnapshot',
+    name: 'Financial Snapshot',
+    description: 'Animated quarterly financial report with health score ring, sub-score bars, key ratios, and loan composition chart.',
+    requiredProps: ['institutionName', 'overallScore', 'riskLevel', 'capitalAdequacy', 'assetQuality', 'earnings', 'liquidity', 'growth', 'netWorthRatio', 'delinquencyRatio', 'efficiencyRatio', 'coverageRatio', 'loanComposition'],
+    optionalProps: [],
+    defaultDuration: 20,
+    supportedResolutions: ['1080p', 'square', 'story'],
+  },
+  {
+    id: 'CompetitivePitch',
+    name: 'Competitive Pitch',
+    description: 'Rise Analytics vs competitor comparison with feature table, ROI projection, differentiators, and stats.',
+    requiredProps: ['competitorName', 'institutionType', 'estimatedROI', 'features', 'differentiators', 'clientCount', 'retentionRate', 'nps'],
+    optionalProps: [],
+    defaultDuration: 20,
     supportedResolutions: ['1080p', 'square', 'story'],
   },
 ];
@@ -103,7 +122,7 @@ export function renderVideo(compositionId, inputProps, options = {}) {
           const filename = `${compositionId}-${Date.now()}.${format === 'gif' ? 'gif' : 'mp4'}`;
           const outputPath = join(VIDEOS_DIR, filename);
 
-          await renderMedia({
+          const renderPromise = renderMedia({
             composition: {
               ...composition,
               width: res.width,
@@ -117,6 +136,12 @@ export function renderVideo(compositionId, inputProps, options = {}) {
               if (onProgress) onProgress(progress);
             },
           });
+
+          const timeoutPromise = new Promise((_, rej) =>
+            setTimeout(() => rej(new Error('Render timed out after 2 minutes')), RENDER_TIMEOUT_MS)
+          );
+
+          await Promise.race([renderPromise, timeoutPromise]);
 
           resolve({ url: `/api/video/download/${filename}`, filename });
         } catch (err) {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
 import { Video, Play, Download, Loader2, Search, Film, Square, Smartphone, Trash2, Clock } from 'lucide-react';
 import { renderVideo, getVideoDownloadUrl, deleteVideo } from '../../api/videoApi';
 import type { Lead } from '../../types/index';
@@ -17,6 +17,7 @@ const LazyProspectHighlight = lazy(() =>
 
 interface VideoStudioTabProps {
   leads: Lead[];
+  initialLeadId?: string;
 }
 
 const RESOLUTION_OPTIONS: { value: Resolution; label: string; icon: typeof Film }[] = [
@@ -43,9 +44,17 @@ function saveHistory(items: VideoHistoryItem[]) {
   localStorage.setItem('riseVideoHistory', JSON.stringify(items.slice(0, 20)));
 }
 
-export default function VideoStudioTab({ leads }: VideoStudioTabProps) {
+export default function VideoStudioTab({ leads, initialLeadId }: VideoStudioTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
+  // Auto-select lead when navigating from Intelligence Panel
+  useEffect(() => {
+    if (initialLeadId && !selectedLead) {
+      const lead = leads.find((l) => l.id === initialLeadId);
+      if (lead) setSelectedLead(lead);
+    }
+  }, [initialLeadId, leads, selectedLead]);
   const [resolution, setResolution] = useState<Resolution>('1080p');
   const [format, setFormat] = useState<VideoFormat>('mp4');
   const [isRendering, setIsRendering] = useState(false);

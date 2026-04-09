@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Bookmark, Plus, X, RotateCcw } from 'lucide-react';
-import { cn } from '../lib/utils';
 
 interface FilterState {
   searchTerm: string;

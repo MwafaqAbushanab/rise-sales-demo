@@ -7,7 +7,7 @@ import { calculateWinProbability } from '../utils/competitiveIntelligence';
 import { calculateROI, getDefaultInputs, calculateRisePricing, formatCurrencyShort } from '../utils/roiCalculator';
 import { useCallReport } from '../hooks/useCallReport';
 import FinancialHealthCard from './FinancialHealthCard';
-import { Brain, Award, TrendingUp, Zap, ShoppingCart, ChevronDown, ChevronUp, Swords, Shield, Target, Eye, Trophy, CheckCircle, AlertTriangle, Lightbulb, Calculator, Percent, Clock, Mail, Activity, Users } from 'lucide-react';
+import { Brain, Award, TrendingUp, Zap, ShoppingCart, ChevronDown, ChevronUp, Swords, Shield, Target, Eye, Trophy, CheckCircle, AlertTriangle, Lightbulb, Calculator, Percent, Clock, Mail, Activity, Users, Video } from 'lucide-react';
 import ContactsCard from './ContactsCard';
 
 interface IntelligencePanelProps {
@@ -16,9 +16,10 @@ interface IntelligencePanelProps {
   competitiveIntel: CompetitiveIntel | null;
   onOpenROICalculator: () => void;
   onComposeEmail: () => void;
+  onGenerateVideo?: () => void;
 }
 
-export default function IntelligencePanel({ intelligence, lead, competitiveIntel, onOpenROICalculator, onComposeEmail }: IntelligencePanelProps) {
+export default function IntelligencePanel({ intelligence, lead, competitiveIntel, onOpenROICalculator, onComposeEmail, onGenerateVideo }: IntelligencePanelProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     contacts: true,
     financial: true,
@@ -627,13 +628,24 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
                 <p className="text-[10px] text-gray-400 italic">ROI projections are estimates based on industry benchmarks and may vary.</p>
 
                 {/* Open Full Calculator Button */}
-                <button
-                  onClick={onOpenROICalculator}
-                  className="w-full py-2 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
-                >
-                  <Calculator className="w-4 h-4" />
-                  Open Full ROI Calculator
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onOpenROICalculator}
+                    className="flex-1 py-2 px-4 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                  >
+                    <Calculator className="w-4 h-4" />
+                    ROI Calculator
+                  </button>
+                  {onGenerateVideo && (
+                    <button
+                      onClick={onGenerateVideo}
+                      className="py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                    >
+                      <Video className="w-4 h-4" />
+                      Video
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

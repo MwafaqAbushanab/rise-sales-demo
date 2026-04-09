@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Mail, Phone, ExternalLink, Loader2, UserX, Search, Check } from 'lucide-react';
+import { Users, Mail, Phone, Loader2, UserX, Search, Check } from 'lucide-react';
 import { useContacts } from '../hooks/useContacts';
 import { triggerContactSearch, triggerEnrichment } from '../api/contactsApi';
 import type { DecisionMaker } from '../types/contacts';

@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Bot, Linkedin, FileText, Swords, Hash, Globe, Megaphone, Sparkles, Loader2, Copy, Check, Building2, GraduationCap, MessageSquare, Mail, TrendingUp, Rocket, Video } from 'lucide-react';
 import { generateSocialPost, generateBlogOutline, generateBattleCard, generateAISearchContent, RISE_ANALYTICS_PROFILE, SEO_KEYWORDS, type MarketingContent } from '../../utils/marketingAgent';
 import { COPY_FRAMEWORKS, EMAIL_FRAMEWORKS, SOCIAL_HOOK_TYPES, HEADLINE_FORMULAS } from '../../data/marketingFrameworks';
@@ -19,7 +20,13 @@ interface MarketingAgentProps {
 
 // Marketing Agent Dashboard - Generate content and improve AI search visibility
 export default function MarketingAgentDashboard({ leads = [] }: MarketingAgentProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('aiCreate');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const tab = searchParams.get('tab');
+    return tab && ['aiCreate', 'social', 'blog', 'battle', 'seo', 'ai', 'emailSeq', 'cro', 'launch', 'video'].includes(tab)
+      ? (tab as TabId)
+      : 'aiCreate';
+  });
   const [generatedContent, setGeneratedContent] = useState<MarketingContent | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>('company');
   const [selectedPlatform, setSelectedPlatform] = useState<'linkedin' | 'twitter' | 'facebook'>('linkedin');
@@ -949,7 +956,7 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
         {activeTab === 'launch' && <LaunchPlannerTab />}
         {activeTab === 'video' && (
           <Suspense fallback={<div className="p-8 text-center text-gray-400"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Loading Video Studio...</div>}>
-            <VideoStudioTab leads={leads} />
+            <VideoStudioTab leads={leads} initialLeadId={searchParams.get('leadId') ?? undefined} />
           </Suspense>
         )}
       </div>

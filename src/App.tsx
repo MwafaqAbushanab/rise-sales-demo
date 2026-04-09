@@ -304,6 +304,7 @@ export default function App() {
                       competitiveIntel={selectedLeadCompetitiveIntel}
                       onOpenROICalculator={() => setShowROICalculator(true)}
                       onComposeEmail={() => { if (selectedLead) handleComposeEmail(selectedLead); }}
+                      onGenerateVideo={() => { if (selectedLead) navigate(`/marketing?tab=video&leadId=${selectedLead.id}`); }}
                     />
                   </ErrorBoundary>
                 </div>
