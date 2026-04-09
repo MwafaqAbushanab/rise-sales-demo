@@ -2,6 +2,7 @@ import { TrendingUp, TrendingDown, Minus, Shield, AlertTriangle, BarChart3, User
 import type { CallReportData, FinancialHealthScore } from '../types/callReport';
 import { getRiskColor, getRiskBgColor, getHealthLabel } from '../utils/financialHealth';
 import { formatCurrency } from '../types';
+import { cn } from '../lib/utils';
 
 interface FinancialHealthCardProps {
   callReport: CallReportData;
@@ -28,10 +29,10 @@ function ScoreBar({ label, score, color }: { label: string; score: number; color
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
         <span className="text-gray-600">{label}</span>
-        <span className="font-medium text-gray-800">{score}/100</span>
+        <span className={cn('font-semibold', score >= 70 ? 'text-gray-800' : score >= 50 ? 'text-amber-700' : 'text-red-700')}>{score}/100</span>
       </div>
-      <div className="h-1.5 bg-gray-200 rounded-full">
-        <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${score}%` }} />
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className={cn('h-2 rounded-full transition-all duration-500', color)} style={{ width: `${score}%` }} />
       </div>
     </div>
   );
@@ -59,18 +60,25 @@ export default function FinancialHealthCard({ callReport, financialHealth, compa
   return (
     <div className="space-y-4">
       {/* Overall Health Score */}
-      <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
-        <div className={`w-16 h-16 rounded-full flex items-center justify-center ${getRiskBgColor(financialHealth.riskLevel)}`}>
-          <span className={`text-2xl font-bold ${getRiskColor(financialHealth.riskLevel)}`}>
+      <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-50 to-gray-50/50 rounded-xl border border-gray-100">
+        <div className={cn('relative w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm', getRiskBgColor(financialHealth.riskLevel))}>
+          <span className={cn('text-2xl font-bold', getRiskColor(financialHealth.riskLevel))}>
             {financialHealth.overall}
           </span>
+          <div className={cn('absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] shadow-sm',
+            financialHealth.riskLevel === 'low' ? 'bg-green-500' :
+            financialHealth.riskLevel === 'moderate' ? 'bg-amber-500' :
+            financialHealth.riskLevel === 'elevated' ? 'bg-orange-500' : 'bg-red-500'
+          )}>
+            {financialHealth.riskLevel === 'low' ? '✓' : '!'}
+          </div>
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <Shield className="w-4 h-4 text-gray-500" />
             <span className="text-sm font-semibold text-gray-900">Financial Health Score</span>
           </div>
-          <div className={`text-xs font-medium ${getRiskColor(financialHealth.riskLevel)}`}>
+          <div className={cn('text-xs font-semibold', getRiskColor(financialHealth.riskLevel))}>
             {financialHealth.riskLevel.charAt(0).toUpperCase() + financialHealth.riskLevel.slice(1)} Risk
           </div>
           <div className="text-[10px] text-gray-400 mt-0.5">
@@ -90,7 +98,7 @@ export default function FinancialHealthCard({ callReport, financialHealth, compa
 
       {/* Key Ratios */}
       <div>
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+        <h4 className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
           <BarChart3 className="w-3 h-3" /> Key Financial Ratios
         </h4>
         <div className="grid grid-cols-2 gap-2">
@@ -147,10 +155,10 @@ export default function FinancialHealthCard({ callReport, financialHealth, compa
 
       {/* Loan Composition */}
       <div>
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+        <h4 className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
           <CreditCard className="w-3 h-3" /> Loan Composition
         </h4>
-        <div className="h-3 rounded-full overflow-hidden flex mb-2">
+        <div className="h-3.5 rounded-full overflow-hidden flex mb-2 shadow-inner">
           <div className="bg-blue-500" style={{ width: `${q.loanComposition.realEstate}%` }} title={`Real Estate: ${q.loanComposition.realEstate}%`} />
           <div className="bg-emerald-500" style={{ width: `${q.loanComposition.auto}%` }} title={`Auto: ${q.loanComposition.auto}%`} />
           <div className="bg-amber-500" style={{ width: `${q.loanComposition.creditCard}%` }} title={`Credit Cards: ${q.loanComposition.creditCard}%`} />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bookmark, Plus, X, RotateCcw } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 interface FilterState {
   searchTerm: string;
@@ -97,7 +98,7 @@ export default function SavedFilters({ currentFilters, onApplyFilter }: SavedFil
       {savedFilters.map((sf) => (
         <div
           key={sf.id}
-          className="group flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
+          className="group flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs font-medium text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all cursor-pointer shadow-sm"
           onClick={() => onApplyFilter(sf.filters)}
           title={describeFilter(sf.filters)}
         >
@@ -113,7 +114,7 @@ export default function SavedFilters({ currentFilters, onApplyFilter }: SavedFil
 
       {/* Save current button */}
       {showSaveInput ? (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <input
             type="text"
             value={filterName}
@@ -121,18 +122,18 @@ export default function SavedFilters({ currentFilters, onApplyFilter }: SavedFil
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setShowSaveInput(false); }}
             placeholder="Filter name..."
             autoFocus
-            className="px-2 py-1 border border-blue-300 rounded-md text-xs w-32 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="px-2.5 py-1.5 border border-blue-300 rounded-lg text-xs w-32 focus:outline-none focus:ring-2 focus:ring-blue-500/40 bg-white"
           />
           <button
             onClick={handleSave}
             disabled={!filterName.trim()}
-            className="px-2 py-1 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
           >
             Save
           </button>
           <button
             onClick={() => setShowSaveInput(false)}
-            className="px-1.5 py-1 text-gray-400 hover:text-gray-600 transition-colors"
+            className="px-1.5 py-1.5 text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X className="w-3 h-3" />
           </button>
@@ -141,7 +142,7 @@ export default function SavedFilters({ currentFilters, onApplyFilter }: SavedFil
         active && (
           <button
             onClick={() => setShowSaveInput(true)}
-            className="flex items-center gap-1 px-2.5 py-1 border border-dashed border-gray-300 rounded-full text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all"
           >
             <Plus className="w-3 h-3" />
             Save Filter
@@ -153,7 +154,7 @@ export default function SavedFilters({ currentFilters, onApplyFilter }: SavedFil
       {active && (
         <button
           onClick={handleClearFilters}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 hover:text-red-600 transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
         >
           <RotateCcw className="w-3 h-3" />
           Clear
