@@ -54,10 +54,12 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
 
   if (!intelligence || !lead) {
     return (
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 h-full flex flex-col items-center justify-center text-center">
-        <Brain className="w-12 h-12 text-gray-300 mb-3" />
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 h-full flex flex-col items-center justify-center text-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl flex items-center justify-center mb-4">
+          <Brain className="w-8 h-8 text-purple-400" />
+        </div>
         <h3 className="font-semibold text-gray-700 mb-1">Prospecting Intelligence</h3>
-        <p className="text-sm text-gray-500">Select an institution to see AI-powered sales insights</p>
+        <p className="text-sm text-gray-500 max-w-xs">Select an institution from the table to see AI-powered sales insights, competitive analysis, and deal strategy</p>
       </div>
     );
   }
@@ -68,15 +70,15 @@ export default function IntelligencePanel({ intelligence, lead, competitiveIntel
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-purple-600 to-indigo-600">
+      <div className="p-4 border-b bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-1 ring-white/20">
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Prospecting Intelligence</h3>
-              <p className="text-xs text-purple-100">AI-Powered Analysis</p>
+              <h3 className="font-semibold text-white text-sm">Prospecting Intelligence</h3>
+              <p className="text-[11px] text-purple-200">AI-Powered Analysis</p>
             </div>
           </div>
           <button
