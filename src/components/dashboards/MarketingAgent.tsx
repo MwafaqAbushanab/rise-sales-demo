@@ -261,10 +261,12 @@ Generate ${aiFaqCount} FAQs covering different aspects: product features, pricin
   return (
     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
       {/* Header with metrics */}
-      <div className="p-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+      <div className="p-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Megaphone className="w-6 h-6" />
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-1 ring-white/20">
+              <Megaphone className="w-5 h-5" />
+            </div>
             <div>
               <h3 className="font-semibold text-lg">Marketing Agent</h3>
               <p className="text-purple-200 text-sm">Generate content & improve AI search visibility</p>

@@ -52,9 +52,12 @@ export default function SalesAccelerationDashboard({ leads, onSelectLead }: {
 
   if (hotLeads.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-lg border p-8 text-center">
-        <Rocket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-        <p className="text-gray-500">Loading hot leads...</p>
+      <div className="bg-white rounded-xl shadow-lg border p-12 text-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <Rocket className="w-8 h-8 text-orange-400" />
+        </div>
+        <h3 className="font-semibold text-gray-700 mb-1">Loading Hot Leads</h3>
+        <p className="text-sm text-gray-500">Analyzing product-market fit & buying signals...</p>
       </div>
     );
   }
@@ -62,14 +65,14 @@ export default function SalesAccelerationDashboard({ leads, onSelectLead }: {
   return (
     <div className="bg-white rounded-xl shadow-lg border overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-500 p-4">
+      <div className="bg-gradient-to-r from-orange-500 via-red-500 to-rose-600 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-1 ring-white/20">
               <Flame className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Hot Leads - Who Needs Rise Analytics</h2>
+              <h2 className="text-lg font-bold text-white">Hot Leads — Who Needs Rise Analytics</h2>
               <p className="text-orange-100 text-sm">Ranked by product-market fit & buying signals</p>
             </div>
           </div>

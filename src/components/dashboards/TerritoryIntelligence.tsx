@@ -60,10 +60,12 @@ export default function TerritoryIntelligenceDashboard({ leads }: { leads: Lead[
   return (
     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
       {/* Header with Key Metrics */}
-      <div className="p-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white">
+      <div className="p-4 bg-gradient-to-r from-blue-600 via-cyan-600 to-teal-600 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Globe className="w-6 h-6" />
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-1 ring-white/20">
+              <Globe className="w-5 h-5" />
+            </div>
             <div>
               <h3 className="font-semibold text-lg">Territory Intelligence</h3>
               <p className="text-blue-200 text-sm">Market penetration & geographic analysis</p>

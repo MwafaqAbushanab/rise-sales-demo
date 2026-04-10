@@ -142,10 +142,12 @@ export default function DealCoachingDashboard({ selectedLead, intelligence: _int
   return (
     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
       {/* Header with Win Probability */}
-      <div className="p-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
+      <div className="p-4 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <GraduationCap className="w-6 h-6" />
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-1 ring-white/20">
+              <GraduationCap className="w-5 h-5" />
+            </div>
             <div>
               <h3 className="font-semibold text-lg">AI Deal Coach</h3>
               <p className="text-emerald-200 text-sm">Real-time sales coaching & deal intelligence</p>

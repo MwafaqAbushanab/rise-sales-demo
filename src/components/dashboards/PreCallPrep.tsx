@@ -88,36 +88,43 @@ export default function PreCallPrep({ leads, selectedLead, onSelectLead }: PreCa
   return (
     <div>
       {/* Header */}
-      <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">Pre-Call Intelligence Brief</h2>
-            <p className="text-xs text-gray-500">Select an institution to generate a comprehensive briefing for your next call</p>
-          </div>
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden mb-6">
+        <div className="p-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-1 ring-white/20">
+                <Phone className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Pre-Call Intelligence Brief</h2>
+                <p className="text-xs text-blue-200">Select an institution to generate a comprehensive briefing</p>
+              </div>
+            </div>
           {brief && (
             <div className="flex items-center gap-2">
-              <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-lg text-xs font-medium text-white hover:bg-white/25 transition-all ring-1 ring-white/10">
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? 'Copied!' : 'Copy'}
               </button>
-              <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/15 backdrop-blur-sm rounded-lg text-xs font-medium text-white hover:bg-white/25 transition-all ring-1 ring-white/10">
                 <Printer className="w-3.5 h-3.5" />
                 Print
               </button>
             </div>
           )}
         </div>
+        </div>
 
         {/* Lead Selector */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div className="relative p-4">
+          <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             value={searchQuery || (selectedLead ? selectedLead.name : '')}
             onChange={e => { setSearchQuery(e.target.value); setShowDropdown(true); }}
             onFocus={() => setShowDropdown(true)}
             placeholder="Search institutions by name, city, or state..."
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-300 bg-gray-50 transition-all"
           />
           {showDropdown && searchResults.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-64 overflow-y-auto">
